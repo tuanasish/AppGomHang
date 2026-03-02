@@ -1,0 +1,10 @@
+{
+    "project": {
+        "name": "gomhangpro-app",
+        "description": "App nội bộ (TestFlight) với tất cả chức năng y hệt như website",
+        "created_at": "2026-03-02T14:47:50+07:00"
+    },
+    "tech_stack": [],
+    "features": [],
+    "decisions": []
+}
