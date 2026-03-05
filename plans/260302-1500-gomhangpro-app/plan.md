@@ -14,11 +14,14 @@ Dự án xây dựng App Mobile đa nền tảng cho nhân viên nội bộ củ
 
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
-| 01 | Setup Environment | ⬜ Pending | 0% |
-| 02 | Authentication & Core Sync | ⬜ Pending | 0% |
-| 03 | UI Components (Clone Web) | ⬜ Pending | 0% |
-| 04 | Screens & Navigation | ⬜ Pending | 0% |
-| 05 | Testing & TestFlight Build | ⬜ Pending | 0% |
+| 01 | Setup Environment | ✅ Complete | 100% |
+| 02 | Authentication & Core Sync | ✅ Complete | 100% |
+| 03 | UI Components (Clone Web) | ✅ Complete | 100% |
+| 04 | Screens & Navigation | ✅ Complete | 100% |
+| 05 | Worker Features (StartShift, OrderDetail, History)| ✅ Complete| 100% |
+| 06 | Manager Features (Admin, Counters, Staff) | ✅ Complete | 100% |
+| 07 | Data Binding & API Integration | ✅ Complete | 100% |
+| 08 | Testing & TestFlight Build | 🟡 In Progress | 0% |
 
 ## Quick Commands
 - Chạy Design/Thiết kế chi tiết: `/design`

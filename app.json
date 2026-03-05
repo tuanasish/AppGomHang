@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "gomhangpro-app",
+    "name": "Gom Hàng Ninh Hiệp",
     "slug": "gomhangpro-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,9 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gomhangpro.internalapp"
     },
     "android": {
+      "package": "com.gomhangpro.internalapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -38,11 +40,18 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "aef96a84-361d-4240-93d7-40b162ea0cb3"
+      }
     }
   }
 }
