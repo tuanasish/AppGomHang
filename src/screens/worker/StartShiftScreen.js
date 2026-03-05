@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import Button from '../../components/common/Button';
-import { getCurrentShiftAPI, startShiftAPI } from '../../api/shifts';
+import { getCurrentShiftAPI, startShiftAPI, autoStartShiftAPI } from '../../api/shifts';
 const { spacing, typography, borderRadius } = theme;
 const colors = {
     background: theme.colors.background.light,
@@ -51,7 +51,14 @@ const StartShiftScreen = () => {
         setError(null);
         try {
             const currentShift = await getCurrentShiftAPI();
-            setShift(currentShift?.data || null);
+            const shiftData = currentShift?.data || null;
+            setShift(shiftData);
+
+            // Tự động chuyển thẳng vào màn Home nếu đã có ca đang active
+            if (shiftData && shiftData.status === 'active') {
+                // Dùng replace để không back lại màn StartShift được
+                navigation.replace('WorkerMain');
+            }
         } catch (err) {
             console.error('Load current shift error:', err);
             setError('Lỗi tải thông tin ca làm việc. Vui lòng thử lại.');
@@ -71,6 +78,20 @@ const StartShiftScreen = () => {
         } catch (err) {
             console.error('Start shift error:', err);
             setError('Lỗi bắt đầu ca. Vui lòng thử lại.');
+        } finally {
+            setIsStarting(false);
+        }
+    };
+
+    const handleAutoStartShift = async () => {
+        setIsStarting(true);
+        setError(null);
+        try {
+            await autoStartShiftAPI();
+            navigation.replace('WorkerMain'); // Chuyển thẳng vào Home mượt mà
+        } catch (err) {
+            console.error('Auto start shift error:', err);
+            setError(err.response?.data?.error || 'Lỗi tự động tạo ca. Vui lòng thử lại.');
         } finally {
             setIsStarting(false);
         }
@@ -104,10 +125,17 @@ const StartShiftScreen = () => {
         if (!shift) {
             return (
                 <View style={styles.centerContainer}>
-                    <Ionicons name="alert-circle-outline" size={64} color={colors.gray400} />
-                    <Text style={styles.noShiftText}>Không tìm thấy ca làm việc.</Text>
-                    <Text style={styles.noShiftSubtext}>Vui lòng liên hệ quản lý để được giao ca.</Text>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <Ionicons name="briefcase-outline" size={64} color={colors.primary} />
+                    <Text style={styles.title}>Ca làm việc mới</Text>
+                    <Text style={styles.noShiftSubtext}>Bạn chưa có ca làm việc nào trong ngày hôm nay. Nhấn "Bắt đầu làm việc" để hệ thống tự động tạo ca với số dư 0đ.</Text>
+                    <Button
+                        title="Bắt đầu làm việc (Tự tạo ca)"
+                        onPress={handleAutoStartShift}
+                        loading={isStarting}
+                        disabled={isStarting}
+                        style={{ marginTop: spacing.xl, width: '100%' }}
+                    />
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { marginTop: spacing.md }]}>
                         <Text style={styles.backButtonText}>Quay lại</Text>
                     </TouchableOpacity>
                 </View>

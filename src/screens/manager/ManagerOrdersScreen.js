@@ -10,13 +10,16 @@ import {
     TextInput,
     Alert,
     Platform,
-    ScrollView
+    ScrollView,
+    Keyboard,
+    TouchableWithoutFeedback,
+    KeyboardAvoidingView
 } from 'react-native';
 import { showError } from '../../utils/errorHelper';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '../../theme/theme';
-import { formatCurrency, formatDate } from '../../utils/helpers';
+import { formatCurrency, formatDate, getLocalDateString } from '../../utils/helpers';
 import { useAuth } from '../../context/AuthContext';
 
 import { useOrdersByDate, useUpdateOrder } from '../../hooks/queries/useOrders';
@@ -39,7 +42,7 @@ export default function ManagerOrdersScreen({ navigation }) {
         loaiTienThem: ''
     });
 
-    const dateStr = filterDate.toISOString().split('T')[0];
+    const dateStr = getLocalDateString(filterDate);
     const { data: ordersRes, isLoading, refetch, isRefetching } = useOrdersByDate(dateStr);
     const updateOrderMutation = useUpdateOrder();
 
@@ -262,92 +265,101 @@ export default function ManagerOrdersScreen({ navigation }) {
             )}
 
             <Modal visible={editModalVisible} transparent={true} animationType="slide">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Sửa hóa đơn</Text>
-                            <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-                                <Ionicons name="close" size={24} color="#333" />
-                            </TouchableOpacity>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.modalOverlay}>
+                            <TouchableWithoutFeedback>
+                                <View style={styles.modalContent}>
+                                    <View style={styles.modalHeader}>
+                                        <Text style={styles.modalTitle}>Sửa hóa đơn</Text>
+                                        <TouchableOpacity onPress={() => setEditModalVisible(false)}>
+                                            <Ionicons name="close" size={24} color="#333" />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <Text style={styles.inputLabel}>Tiền hàng</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        keyboardType="numeric"
+                                        value={editForm.tienHang}
+                                        onChangeText={t => setEditForm(prev => ({ ...prev, tienHang: t }))}
+                                    />
+
+                                    <Text style={styles.inputLabel}>Tiền công gom</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        keyboardType="numeric"
+                                        value={editForm.tienCongGom}
+                                        onChangeText={t => setEditForm(prev => ({ ...prev, tienCongGom: t }))}
+                                    />
+
+                                    <Text style={styles.inputLabel}>Phí đóng hàng</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        keyboardType="numeric"
+                                        value={editForm.phiDongHang}
+                                        onChangeText={t => setEditForm(prev => ({ ...prev, phiDongHang: t }))}
+                                    />
+
+                                    <Text style={styles.inputLabel}>Tiền hoa hồng</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        keyboardType="numeric"
+                                        value={editForm.tienHoaHong}
+                                        onChangeText={t => setEditForm(prev => ({ ...prev, tienHoaHong: t }))}
+                                    />
+
+                                    <Text style={styles.inputLabel}>Tiền thuế</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        keyboardType="numeric"
+                                        value={editForm.tienThem}
+                                        onChangeText={t => setEditForm(prev => ({ ...prev, tienThem: t }))}
+                                    />
+
+                                    <Text style={styles.inputLabel}>Loại thuế (VD: Thuế 1.5%)</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={editForm.loaiTienThem}
+                                        placeholder="Thuế 1.5%..."
+                                        onChangeText={t => setEditForm(prev => ({ ...prev, loaiTienThem: t }))}
+                                    />
+
+                                    <View style={styles.quickTaxContainer}>
+                                        <TouchableOpacity
+                                            style={styles.quickTaxBtn}
+                                            onPress={() => {
+                                                const tongChuaThue = parseInt(editForm.tienHang) || 0;
+                                                const thue = Math.round(tongChuaThue * 0.015);
+                                                setEditForm(prev => ({
+                                                    ...prev,
+                                                    tienThem: thue.toString(),
+                                                    loaiTienThem: 'Thuế 1.5%'
+                                                }));
+                                            }}
+                                        >
+                                            <Text style={styles.quickTaxText}>+ Thuế 1.5%</Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            style={[styles.quickTaxBtn, styles.quickTaxBtnZero]}
+                                            onPress={() => setEditForm(prev => ({ ...prev, tienThem: '0', loaiTienThem: '' }))}
+                                        >
+                                            <Text style={styles.quickTaxText}>0% (Không thuế)</Text>
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <TouchableOpacity style={styles.submitBtn} onPress={handleSaveEdit}>
+                                        <Text style={styles.submitBtnText}>Lưu thay đổi</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </TouchableWithoutFeedback>
                         </View>
-
-                        <Text style={styles.inputLabel}>Tiền hàng</Text>
-                        <TextInput
-                            style={styles.input}
-                            keyboardType="numeric"
-                            value={editForm.tienHang}
-                            onChangeText={t => setEditForm(prev => ({ ...prev, tienHang: t }))}
-                        />
-
-                        <Text style={styles.inputLabel}>Tiền công gom</Text>
-                        <TextInput
-                            style={styles.input}
-                            keyboardType="numeric"
-                            value={editForm.tienCongGom}
-                            onChangeText={t => setEditForm(prev => ({ ...prev, tienCongGom: t }))}
-                        />
-
-                        <Text style={styles.inputLabel}>Phí đóng hàng</Text>
-                        <TextInput
-                            style={styles.input}
-                            keyboardType="numeric"
-                            value={editForm.phiDongHang}
-                            onChangeText={t => setEditForm(prev => ({ ...prev, phiDongHang: t }))}
-                        />
-
-                        <Text style={styles.inputLabel}>Tiền hoa hồng</Text>
-                        <TextInput
-                            style={styles.input}
-                            keyboardType="numeric"
-                            value={editForm.tienHoaHong}
-                            onChangeText={t => setEditForm(prev => ({ ...prev, tienHoaHong: t }))}
-                        />
-
-                        <Text style={styles.inputLabel}>Tiền thuế</Text>
-                        <TextInput
-                            style={styles.input}
-                            keyboardType="numeric"
-                            value={editForm.tienThem}
-                            onChangeText={t => setEditForm(prev => ({ ...prev, tienThem: t }))}
-                        />
-
-                        <Text style={styles.inputLabel}>Loại thuế (VD: Thuế 1.5%)</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={editForm.loaiTienThem}
-                            placeholder="Thuế 1.5%..."
-                            onChangeText={t => setEditForm(prev => ({ ...prev, loaiTienThem: t }))}
-                        />
-
-                        <View style={styles.quickTaxContainer}>
-                            <TouchableOpacity
-                                style={styles.quickTaxBtn}
-                                onPress={() => {
-                                    const tongChuaThue = parseInt(editForm.tienHang) || 0;
-                                    const thue = Math.round(tongChuaThue * 0.015);
-                                    setEditForm(prev => ({
-                                        ...prev,
-                                        tienThem: thue.toString(),
-                                        loaiTienThem: 'Thuế 1.5%'
-                                    }));
-                                }}
-                            >
-                                <Text style={styles.quickTaxText}>+ Thuế 1.5%</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={[styles.quickTaxBtn, styles.quickTaxBtnZero]}
-                                onPress={() => setEditForm(prev => ({ ...prev, tienThem: '0', loaiTienThem: '' }))}
-                            >
-                                <Text style={styles.quickTaxText}>0% (Không thuế)</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        <TouchableOpacity style={styles.submitBtn} onPress={handleSaveEdit}>
-                            <Text style={styles.submitBtnText}>Lưu thay đổi</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+                    </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );

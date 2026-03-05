@@ -17,8 +17,14 @@ export default function WorkerHomeScreen() {
     const [shift, setShift] = useState(null);
     const [orders, setOrders] = useState([]);
 
-    const loadData = async () => {
-        setLoading(true);
+    const loadData = async (isRefresh = false) => {
+        if (isRefresh) {
+            setLoading(true); // Dùng cho RefreshControl
+        } else if (!shift) {
+            // Chỉ hiện loading xoay giữa màn hình nếu chưa có dữ liệu ca
+            setLoading(true);
+        }
+
         try {
             const shiftRes = await getCurrentShiftAPI();
             if (shiftRes && shiftRes.success && shiftRes.data) {
@@ -45,9 +51,9 @@ export default function WorkerHomeScreen() {
 
     useEffect(() => {
         const unsubscribe = navigation.addListener('focus', () => {
-            loadData();
+            loadData(false); // Fetch ngầm khi focus, không xoay loading toàn màn hình
         });
-        loadData();
+        loadData(true); // Xoay loading lần đầu tiên truy cập
         return unsubscribe;
     }, [navigation]);
 
@@ -60,7 +66,8 @@ export default function WorkerHomeScreen() {
         return amount.toLocaleString('vi-VN') + 'đ';
     };
 
-    if (loading) {
+    // Chỉ chặn render toàn màn hình nếu loading và đang CHƯA CÓ dữ liệu
+    if (loading && !shift && orders.length === 0) {
         return (
             <View style={styles.centerContainer}>
                 <Loading text="Đang tải dữ liệu..." />
@@ -82,7 +89,7 @@ export default function WorkerHomeScreen() {
 
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
-                refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+                refreshControl={<RefreshControl refreshing={loading} onRefresh={() => loadData(true)} />}
             >
                 {shift ? (
                     <>

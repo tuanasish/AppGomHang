@@ -26,3 +26,14 @@ export const formatDate = (dateString) => {
         return dateString;
     }
 };
+
+/**
+ * Returns a YYYY-MM-DD string adjusted to local timezone (to avoid UTC offset issues)
+ * @param {Date} date - Optional Date object, defaults to today
+ * @returns {string} Formatted YYYY-MM-DD string
+ */
+export const getLocalDateString = (date = new Date()) => {
+    const offset = date.getTimezoneOffset();
+    const adjustedDate = new Date(date.getTime() - (offset * 60 * 1000));
+    return adjustedDate.toISOString().split('T')[0];
+};

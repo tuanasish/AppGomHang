@@ -1,32 +1,40 @@
 {
-    "updated_at": "2026-03-04T00:20:00+07:00",
+    "updated_at": "2026-03-05T16:35:00+07:00",
     "working_on": {
-        "feature": "Order Save Fix & Customer Search Fix",
-        "task": "Fix tienHang=0 validation + customer search + deploy backend",
+        "feature": "App Distribution Setup",
+        "task": "TestFlight submission and setup",
         "status": "done",
         "files": [
-            "src/screens/worker/CreateOrderScreen.js",
-            "backend/src/controllers/orders.controller.ts",
-            "backend/src/controllers/customers.controller.ts"
+            "eas.json"
         ],
         "blockers": [],
-        "notes": "APK build đang chạy trên EAS cloud (~110 min queue). Backend đã deploy thành công lên gomhangprobackend.vercel.app"
+        "notes": "iOS production build submitted to TestFlight. Android build in queue. Guided user on App Store Connect roles and Apple Developer name limitations."
     },
     "pending_tasks": [
         {
-            "task": "Xác nhận lưu đơn hàng thành công trên APK mới",
+            "task": "Test the App via TestFlight",
             "priority": "high",
-            "notes": "Test save order với tienHang=0 và các trường tiền bỏ trống"
+            "notes": "Wait for Apple to process the IPA (15-30 mins), install via TestFlight invite email."
+        },
+        {
+            "task": "Monitor Android Build",
+            "priority": "high",
+            "notes": "EAS Android preview build is queued due to free tier concurrency limits. Needs downloading and testing once done."
+        },
+        {
+            "task": "Setup Public Link for TestFlight (Optional)",
+            "priority": "medium",
+            "notes": "Once Beta App Review passes (12-24h), enable External Testing Public Link for easier employee onboarding."
+        },
+        {
+            "task": "Xác nhận lưu đơn hàng thành công trên APK mới",
+            "priority": "medium",
+            "notes": "Test save order với tienHang=0 và các trường tiền bỏ trống trên máy thật Android"
         },
         {
             "task": "Xóa debug console.log trong CreateOrderScreen.js",
             "priority": "low",
             "notes": "[DEBUG] Save order payload và error logs"
-        },
-        {
-            "task": "Build IPA iOS cho TestFlight",
-            "priority": "medium",
-            "notes": "eas build --profile production --platform ios --auto-submit"
         },
         {
             "task": "Performance optimization plan",
@@ -36,100 +44,51 @@
     ],
     "recent_changes": [
         {
-            "timestamp": "2026-03-02",
-            "type": "feature",
-            "description": "Hoàn thành toàn bộ API cho Manager (Dashboard thống kê thời gian thực, quản lý khách, quản lý nhân viên, lịch sử đơn)",
-            "files": [
-                "src/screens/manager/*.js",
-                "src/api/*.js"
-            ]
-        },
-        {
-            "timestamp": "2026-03-03",
-            "type": "fix",
-            "description": "Fix PDF export web (Blob URL approach), fix PDF trên mobile (expo-print + expo-sharing), rename file PDF thành hoadon.pdf",
-            "files": [
-                "src/screens/worker/OrderDetailScreen.js"
-            ]
-        },
-        {
-            "timestamp": "2026-03-03",
-            "type": "feature",
-            "description": "Tạo errorHelper.js centralized error handling. Update 8 screens với thông báo lỗi chi tiết tiếng Việt",
-            "files": [
-                "src/utils/errorHelper.js",
-                "src/screens/*.js"
-            ]
-        },
-        {
-            "timestamp": "2026-03-03",
-            "type": "fix",
-            "description": "Refactor customer search: đổi từ API search sang local filtering (load tất cả khách hàng, filter bằng .filter()). Fix tương tự counter search.",
-            "files": [
-                "src/screens/worker/CreateOrderScreen.js"
-            ]
-        },
-        {
-            "timestamp": "2026-03-03",
-            "type": "fix",
-            "description": "Fix tienHang=0 bị reject: backend validation !tienHang → tienHang===undefined||null||<0. Frontend: tất cả trường tiền NaN → 0 trước khi gửi API.",
-            "files": [
-                "src/screens/worker/CreateOrderScreen.js",
-                "backend/src/controllers/orders.controller.ts"
-            ]
-        },
-        {
-            "timestamp": "2026-03-03",
+            "timestamp": "2026-03-05",
             "type": "config",
-            "description": "Fix Vercel deployment: link đúng project gomhangpro_backend (underscore), deploy từ thư mục cha gomhangpro-new/",
+            "description": "Cấu hình eas.json cho iOS preview profile (ad-hoc) và production profile (remote version source)",
             "files": [
-                ".vercel/project.json"
+                "eas.json"
+            ]
+        },
+        {
+            "timestamp": "2026-03-05",
+            "type": "feature",
+            "description": "Xuất PDF đồng loạt tất cả hóa đơn của 1 khách hàng trong ngày",
+            "files": [
+                "src/screens/manager/CustomerDetailScreen.js"
+            ]
+        },
+        {
+            "timestamp": "2026-03-04",
+            "type": "feature",
+            "description": "Đẩy project lên GitHub repository tuanasish/AppGomHang",
+            "files": [
+                ".git",
+                ".gitignore"
             ]
         }
     ],
     "errors_encountered": [
         {
-            "error": "expo-file-system moveAsync deprecated ở Expo v54",
-            "solution": "Import từ 'expo-file-system/legacy' thay vì 'expo-file-system'",
+            "error": "Lỗi 'Cannot find module' khi build EAS production iOS ở chế độ non-interactive",
+            "solution": "Chạy EAS build ở chế độ interactive để đăng nhập Apple ID, tạo App Record trên App Store Connect và cấp chứng chỉ Distribution.",
             "resolved": true
         },
         {
-            "error": "Customer search API trả empty results trên Vercel",
-            "solution": "Đổi sang local filtering: load tất cả customers lúc init, filter local bằng .filter(). Backend search query.or cú pháp ok nhưng Vercel deploy có cache issue.",
-            "resolved": true
-        },
-        {
-            "error": "Order save 400 'Thông tin không hợp lệ' khi tienHang=0",
-            "solution": "Backend: !tienHang evaluates to true khi tienHang=0 → đổi sang tienHang === undefined || tienHang === null || tienHang < 0. Frontend: isNaN(tienHang) ? 0 : tienHang cho tất cả money fields.",
-            "resolved": true
-        },
-        {
-            "error": "Vercel deploy alias -two khác với URL app dùng",
-            "solution": "Project tên gomhangpro_backend (underscore) - khi vercel link sai tên (gomhangprobackend không underscore) → tạo project mới với alias -two. Fix: vercel link --project gomhangpro_backend --yes",
-            "resolved": true
-        },
-        {
-            "error": "Vercel 'path backend/backend does not exist'",
-            "solution": "Vercel project đã set Root Directory = backend. Khi deploy từ backend/ folder → nó tìm backend/backend/. Fix: deploy từ thư mục cha gomhangpro-new/",
+            "error": "TestFlight Internal Testing báo 'No testers matched the search'",
+            "solution": "Tài khoản cần mời phải được thêm vào 'Users and Access' của Apple Developer Program trước mới có thể add vào Internal Testing. Giải pháp khuyên dùng là chuyển sang External Testing (Public Link) chờ duyệt 24h để không phải add rườm rà.",
             "resolved": true
         }
     ],
     "decisions_made": [
         {
-            "decision": "Dùng React Native/Expo thay vì mã web nhúng (WebView)",
-            "reason": "Mượt mà hơn, gọi API native, sẵn sàng build production"
+            "decision": "Giữ nguyên tên Developer là 'Son Mai' trên App Store thay vì đổi thành tên Tiếng Việt Doanh nghiệp",
+            "reason": "Tài khoản Apple Developer là hạng Cá nhân (Individual), Apple bắt buộc hiển thị tên thật theo căn cước. Đổi tên cần đăng ký D-U-N-S và nâng cấp Doanh nghiệp, tốn thời gian không cần thiết cho app nội bộ."
         },
         {
-            "decision": "Tạo riêng Manager Dashboard riêng lẻ không đè vào Worker",
-            "reason": "Phân quyền và UI rành mạch hơn"
-        },
-        {
-            "decision": "Customer search dùng local filtering thay vì API search",
-            "reason": "Backend search trên Vercel không ổn định (cache issue), local filtering nhanh và đáng tin cậy hơn"
-        },
-        {
-            "decision": "Tất cả trường tiền mặc định = 0 khi bỏ trống",
-            "reason": "User thường bỏ trống khi giá trị = 0, tránh force nhập số 0"
+            "decision": "Gợi ý dùng External Testing (Public Link) cho nhân viên tải app iOS",
+            "reason": "Mặc dù phải chờ Apple duyệt Beta App (12-24h), nhưng lợi ích là gửi link tải thẳng không cần add email từng người vào hệ thống rườm rà."
         }
     ]
 }

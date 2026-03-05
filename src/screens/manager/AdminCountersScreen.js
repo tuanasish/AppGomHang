@@ -9,7 +9,10 @@ import {
     Modal,
     TextInput,
     Alert,
-    Platform
+    Platform,
+    Keyboard,
+    TouchableWithoutFeedback,
+    KeyboardAvoidingView
 } from 'react-native';
 import { showError, showValidationError } from '../../utils/errorHelper';
 import { Ionicons } from '@expo/vector-icons';
@@ -182,38 +185,47 @@ export default function AdminCountersScreen({ navigation }) {
             )}
 
             <Modal visible={modalVisible} transparent={true} animationType="fade">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{editingCounter ? 'Sửa quầy' : 'Thêm quầy mới'}</Text>
-                            <TouchableOpacity onPress={handleCloseModal}>
-                                <Ionicons name="close" size={24} color="#333" />
-                            </TouchableOpacity>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.modalOverlay}>
+                            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+                                <View style={styles.modalContent}>
+                                    <View style={styles.modalHeader}>
+                                        <Text style={styles.modalTitle}>{editingCounter ? 'Sửa quầy' : 'Thêm quầy mới'}</Text>
+                                        <TouchableOpacity onPress={handleCloseModal}>
+                                            <Ionicons name="close" size={24} color="#333" />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <Text style={styles.label}>Tên quầy *</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={formData.name}
+                                        onChangeText={t => setFormData({ ...formData, name: t })}
+                                        placeholder="Nhập tên quầy"
+                                        placeholderTextColor={theme.colors.text.hint}
+                                    />
+
+                                    <Text style={styles.label}>Địa chỉ</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={formData.address}
+                                        onChangeText={t => setFormData({ ...formData, address: t })}
+                                        placeholder="Nhập địa chỉ quầy"
+                                        placeholderTextColor={theme.colors.text.hint}
+                                    />
+
+                                    <TouchableOpacity style={styles.submitBtn} onPress={handleSave}>
+                                        <Text style={styles.submitBtnText}>{editingCounter ? 'Cập nhật' : 'Thêm'}</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </TouchableWithoutFeedback>
                         </View>
-
-                        <Text style={styles.label}>Tên quầy *</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={formData.name}
-                            onChangeText={t => setFormData({ ...formData, name: t })}
-                            placeholder="Nhập tên quầy"
-                            placeholderTextColor={theme.colors.text.hint}
-                        />
-
-                        <Text style={styles.label}>Địa chỉ</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={formData.address}
-                            onChangeText={t => setFormData({ ...formData, address: t })}
-                            placeholder="Nhập địa chỉ quầy"
-                            placeholderTextColor={theme.colors.text.hint}
-                        />
-
-                        <TouchableOpacity style={styles.submitBtn} onPress={handleSave}>
-                            <Text style={styles.submitBtnText}>{editingCounter ? 'Cập nhật' : 'Thêm'}</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+                    </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );

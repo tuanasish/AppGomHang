@@ -36,6 +36,14 @@ export const getCurrentShiftAPI = async () => {
 };
 
 /**
+ * Tự động tạo và bắt đầu ca cho worker (tiền giao ca = 0)
+ */
+export const autoStartShiftAPI = async () => {
+    const response = await apiClient.post('/shifts/auto-start');
+    return response.data;
+};
+
+/**
  * Tạo ca mới
  */
 export const createShiftAPI = async (shiftData) => {

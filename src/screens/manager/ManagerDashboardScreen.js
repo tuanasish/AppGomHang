@@ -7,13 +7,14 @@ import { theme } from '../../theme/theme';
 import Loading from '../../components/common/Loading';
 import { useShiftsList } from '../../hooks/queries/useShifts';
 import { useOrdersByDate } from '../../hooks/queries/useOrders';
+import { getLocalDateString } from '../../utils/helpers';
 
 export default function ManagerDashboardScreen() {
     const { userInfo } = useAuth();
 
     const [selectedStaffId, setSelectedStaffId] = useState(null);
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString(new Date());
 
     const { data: shiftsRes, isLoading: shiftsLoading, refetch: refetchShifts } = useShiftsList({ date: today });
     const { data: ordersRes, isLoading: ordersLoading, refetch: refetchOrders } = useOrdersByDate(today);
@@ -41,8 +42,8 @@ export default function ManagerDashboardScreen() {
         const orders = ordersRes?.success ? ordersRes.data : [];
         const staffMap = {};
         orders.forEach(order => {
-            const staffId = order.shiftId?.workerId?._id || 'unknown';
-            const staffName = order.shiftId?.workerId?.name || 'Nhân viên';
+            const staffId = order.staffId || 'unknown';
+            const staffName = order.staffName || 'Nhân viên';
 
             if (!staffMap[staffId]) {
                 staffMap[staffId] = {
@@ -170,7 +171,7 @@ export default function ManagerDashboardScreen() {
                                                         <Text style={styles.orderBadgeText}>{oIndex + 1}</Text>
                                                     </View>
                                                     <View>
-                                                        <Text style={styles.orderCustomer}>{order.customerName}</Text>
+                                                        <Text style={styles.orderCustomer}>Khách: {order.customerName}</Text>
                                                         <Text style={styles.orderTime}>{formatTime(order.createdAt)}</Text>
                                                     </View>
                                                 </View>

@@ -10,13 +10,16 @@ import {
     TextInput,
     Alert,
     Platform,
-    RefreshControl
+    RefreshControl,
+    Keyboard,
+    TouchableWithoutFeedback,
+    KeyboardAvoidingView
 } from 'react-native';
 import { showError, showValidationError } from '../../utils/errorHelper';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '../../theme/theme';
-import { formatCurrency, formatDate } from '../../utils/helpers';
+import { formatCurrency, formatDate, getLocalDateString } from '../../utils/helpers';
 
 import {
     useCustomersList,
@@ -32,7 +35,7 @@ export default function AdminCustomersScreen({ navigation }) {
     const [showDatePicker, setShowDatePicker] = useState(false);
 
     // Formatted date string for queries
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = getLocalDateString(selectedDate);
 
     // Queries
     const {
@@ -301,79 +304,88 @@ export default function AdminCustomersScreen({ navigation }) {
                 transparent={true}
                 animationType="slide"
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>
-                                {editingCustomer ? 'Sửa thông tin' : 'Thêm khách hàng mới'}
-                            </Text>
-                            <TouchableOpacity onPress={closeModal}>
-                                <Ionicons name="close" size={24} color="#333" />
-                            </TouchableOpacity>
-                        </View>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.modalOverlay}>
+                            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+                                <View style={styles.modalContent}>
+                                    <View style={styles.modalHeader}>
+                                        <Text style={styles.modalTitle}>
+                                            {editingCustomer ? 'Sửa thông tin' : 'Thêm khách hàng mới'}
+                                        </Text>
+                                        <TouchableOpacity onPress={closeModal}>
+                                            <Ionicons name="close" size={24} color="#333" />
+                                        </TouchableOpacity>
+                                    </View>
 
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Tên khách hàng *</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={formData.name}
-                                onChangeText={(text) => setFormData({ ...formData, name: text })}
-                                placeholder="Nhập tên khách hàng"
-                                placeholderTextColor={theme.colors.text.hint}
-                            />
-                        </View>
+                                    <View style={styles.formGroup}>
+                                        <Text style={styles.label}>Tên khách hàng *</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={formData.name}
+                                            onChangeText={(text) => setFormData({ ...formData, name: text })}
+                                            placeholder="Nhập tên khách hàng"
+                                            placeholderTextColor={theme.colors.text.hint}
+                                        />
+                                    </View>
 
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Số điện thoại</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={formData.phone}
-                                onChangeText={(text) => setFormData({ ...formData, phone: text })}
-                                placeholder="Nhập số điện thoại"
-                                placeholderTextColor={theme.colors.text.hint}
-                                keyboardType="phone-pad"
-                            />
-                        </View>
+                                    <View style={styles.formGroup}>
+                                        <Text style={styles.label}>Số điện thoại</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={formData.phone}
+                                            onChangeText={(text) => setFormData({ ...formData, phone: text })}
+                                            placeholder="Nhập số điện thoại"
+                                            placeholderTextColor={theme.colors.text.hint}
+                                            keyboardType="phone-pad"
+                                        />
+                                    </View>
 
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Địa chỉ</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={formData.address}
-                                onChangeText={(text) => setFormData({ ...formData, address: text })}
-                                placeholder="Nhập địa chỉ"
-                                placeholderTextColor={theme.colors.text.hint}
-                            />
-                        </View>
+                                    <View style={styles.formGroup}>
+                                        <Text style={styles.label}>Địa chỉ</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={formData.address}
+                                            onChangeText={(text) => setFormData({ ...formData, address: text })}
+                                            placeholder="Nhập địa chỉ"
+                                            placeholderTextColor={theme.colors.text.hint}
+                                        />
+                                    </View>
 
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Công gom mặc định (VNĐ)</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={formData.defaultTienCongGom}
-                                onChangeText={(text) => setFormData({ ...formData, defaultTienCongGom: text })}
-                                placeholder="VD: 50000"
-                                placeholderTextColor={theme.colors.text.hint}
-                                keyboardType="numeric"
-                            />
-                            <Text style={styles.helpText}>Tự động điền khi tạo đơn cho khách này</Text>
-                        </View>
+                                    <View style={styles.formGroup}>
+                                        <Text style={styles.label}>Công gom mặc định (VNĐ)</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={formData.defaultTienCongGom}
+                                            onChangeText={(text) => setFormData({ ...formData, defaultTienCongGom: text })}
+                                            placeholder="VD: 50000"
+                                            placeholderTextColor={theme.colors.text.hint}
+                                            keyboardType="numeric"
+                                        />
+                                        <Text style={styles.helpText}>Tự động điền khi tạo đơn cho khách này</Text>
+                                    </View>
 
-                        <TouchableOpacity
-                            style={styles.submitButton}
-                            onPress={handleSave}
-                            disabled={isMutationPending}
-                        >
-                            {isMutationPending ? (
-                                <ActivityIndicator color="#FFF" />
-                            ) : (
-                                <Text style={styles.submitButtonText}>
-                                    {editingCustomer ? 'Lưu thay đổi' : 'Thêm khách hàng'}
-                                </Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                </View>
+                                    <TouchableOpacity
+                                        style={styles.submitButton}
+                                        onPress={handleSave}
+                                        disabled={isMutationPending}
+                                    >
+                                        {isMutationPending ? (
+                                            <ActivityIndicator color="#FFF" />
+                                        ) : (
+                                            <Text style={styles.submitButtonText}>
+                                                {editingCustomer ? 'Lưu thay đổi' : 'Thêm khách hàng'}
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            </TouchableWithoutFeedback>
+                        </View>
+                    </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );

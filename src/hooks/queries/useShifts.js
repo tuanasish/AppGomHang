@@ -43,6 +43,17 @@ export const useCreateShift = () => {
     });
 };
 
+export const useAutoStartShift = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: shiftsApi.autoStartShiftAPI,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: shiftKeys.current() });
+            queryClient.invalidateQueries({ queryKey: shiftKeys.lists() });
+        },
+    });
+};
+
 export const useStartShift = () => {
     const queryClient = useQueryClient();
     return useMutation({

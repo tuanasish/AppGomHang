@@ -15,7 +15,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { theme } from '../../theme/theme';
-import { formatCurrency, formatDate } from '../../utils/helpers';
+import { formatCurrency, formatDate, getLocalDateString } from '../../utils/helpers';
 
 import { getCustomerByIdAPI } from '../../api/customers';
 import { getOrdersByDateAPI } from '../../api/orders';
@@ -39,7 +39,7 @@ export default function CustomerDetailScreen({ route, navigation }) {
     const loadData = async () => {
         setLoading(true);
         try {
-            const dateStr = selectedDate.toISOString().split('T')[0];
+            const dateStr = getLocalDateString(selectedDate);
             const [customerRes, ordersRes] = await Promise.all([
                 getCustomerByIdAPI(customerId),
                 getOrdersByDateAPI(dateStr)

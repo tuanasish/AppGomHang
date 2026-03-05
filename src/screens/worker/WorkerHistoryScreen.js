@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getOrdersByDateAPI } from '../../api/orders';
+import { formatCurrency, formatDate, getLocalDateString } from '../../utils/helpers';
 const { spacing, typography, borderRadius } = theme;
 const colors = {
     background: theme.colors.background.light,
@@ -52,8 +53,9 @@ const WorkerHistoryScreen = () => {
         setLoading(true);
         setError(null);
         try {
-            const dateString = selectedDate.toISOString().split('T')[0];
-            const response = await getOrdersByDateAPI(dateString);
+            // Formatted date string for queries
+            const dateStr = getLocalDateString(selectedDate);
+            const response = await getOrdersByDateAPI(dateStr);
 
             if (response && response.success && response.data) {
                 const ordersData = response.data;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, ScrollView, Keyboard, TouchableWithoutFeedback, KeyboardAvoidingView, Platform } from 'react-native';
 import { showError, showValidationError } from '../../utils/errorHelper';
 import { theme } from '../../theme/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -184,66 +184,75 @@ export default function AdminStaffScreen() {
 
             {/* Modal */}
             <Modal visible={showModal} animationType="slide" transparent>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{editingStaff ? 'Sửa nhân viên' : 'Thêm nhân viên'}</Text>
-                            <TouchableOpacity onPress={closeModal}>
-                                <Ionicons name="close" size={24} color={theme.colors.text.secondary} />
-                            </TouchableOpacity>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.modalOverlay}>
+                            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+                                <View style={styles.modalContent}>
+                                    <View style={styles.modalHeader}>
+                                        <Text style={styles.modalTitle}>{editingStaff ? 'Sửa nhân viên' : 'Thêm nhân viên'}</Text>
+                                        <TouchableOpacity onPress={closeModal}>
+                                            <Ionicons name="close" size={24} color={theme.colors.text.secondary} />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+                                        <View style={styles.form}>
+                                            <Text style={styles.label}>Tên nhân viên *</Text>
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Nhập tên nhân viên"
+                                                placeholderTextColor={theme.colors.text.hint}
+                                                value={formData.name}
+                                                onChangeText={(t) => setFormData({ ...formData, name: t })}
+                                            />
+
+                                            <Text style={styles.label}>Email *</Text>
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Nhập email"
+                                                placeholderTextColor={theme.colors.text.hint}
+                                                value={formData.email}
+                                                onChangeText={(t) => setFormData({ ...formData, email: t })}
+                                                keyboardType="email-address"
+                                                autoCapitalize="none"
+                                            />
+
+                                            <Text style={styles.label}>Số điện thoại</Text>
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Nhập số điện thoại"
+                                                placeholderTextColor={theme.colors.text.hint}
+                                                value={formData.phone}
+                                                onChangeText={(t) => setFormData({ ...formData, phone: t })}
+                                                keyboardType="phone-pad"
+                                            />
+
+                                            <Text style={styles.label}>{editingStaff ? 'Mật khẩu mới (Tùy chọn)' : 'Mật khẩu *'}</Text>
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder={editingStaff ? "Bỏ trống nếu không đổi" : "Nhập mật khẩu (ít nhất 6 ký tự)"}
+                                                placeholderTextColor={theme.colors.text.hint}
+                                                value={formData.password}
+                                                onChangeText={(t) => setFormData({ ...formData, password: t })}
+                                                secureTextEntry
+                                            />
+
+                                            <Button
+                                                title={editingStaff ? "Cập nhật" : "Thêm mới"}
+                                                onPress={handleCreateOrUpdate}
+                                                style={{ marginTop: 16, marginBottom: 24 }}
+                                            />
+                                        </View>
+                                    </ScrollView>
+                                </View>
+                            </TouchableWithoutFeedback>
                         </View>
-
-                        <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-                            <View style={styles.form}>
-                                <Text style={styles.label}>Tên nhân viên *</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Nhập tên nhân viên"
-                                    placeholderTextColor={theme.colors.text.hint}
-                                    value={formData.name}
-                                    onChangeText={(t) => setFormData({ ...formData, name: t })}
-                                />
-
-                                <Text style={styles.label}>Email *</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Nhập email"
-                                    placeholderTextColor={theme.colors.text.hint}
-                                    value={formData.email}
-                                    onChangeText={(t) => setFormData({ ...formData, email: t })}
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                />
-
-                                <Text style={styles.label}>Số điện thoại</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Nhập số điện thoại"
-                                    placeholderTextColor={theme.colors.text.hint}
-                                    value={formData.phone}
-                                    onChangeText={(t) => setFormData({ ...formData, phone: t })}
-                                    keyboardType="phone-pad"
-                                />
-
-                                <Text style={styles.label}>{editingStaff ? 'Mật khẩu mới (Tùy chọn)' : 'Mật khẩu *'}</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder={editingStaff ? "Bỏ trống nếu không đổi" : "Nhập mật khẩu (ít nhất 6 ký tự)"}
-                                    placeholderTextColor={theme.colors.text.hint}
-                                    value={formData.password}
-                                    onChangeText={(t) => setFormData({ ...formData, password: t })}
-                                    secureTextEntry
-                                />
-
-                                <Button
-                                    title={editingStaff ? "Cập nhật" : "Thêm mới"}
-                                    onPress={handleCreateOrUpdate}
-                                    style={{ marginTop: 16, marginBottom: 24 }}
-                                />
-                            </View>
-                        </ScrollView>
-                    </View>
-                </View>
+                    </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );

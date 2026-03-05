@@ -37,6 +37,7 @@ export default function CreateOrderScreen() {
 
     const [isSaving, setIsSaving] = useState(false);
     const [currentShiftId, setCurrentShiftId] = useState(null);
+    const [quyConLai, setQuyConLai] = useState(0);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -44,6 +45,7 @@ export default function CreateOrderScreen() {
                 const shiftRes = await getCurrentShiftAPI();
                 if (shiftRes && shiftRes.success && shiftRes.data) {
                     setCurrentShiftId(shiftRes.data.id);
+                    setQuyConLai(shiftRes.data.quyConLai || 0);
                 }
                 const counterRes = await getCountersListAPI();
                 if (counterRes && counterRes.success && counterRes.data) {
@@ -387,13 +389,32 @@ export default function CreateOrderScreen() {
                         onChangeText={(t) => setTienHangStr(formatMoneyInput(t))}
                     />
 
-                    <Input
-                        label="Tiền công gom *"
-                        placeholder="0"
-                        keyboardType="numeric"
-                        value={tienCongGomStr}
-                        onChangeText={(t) => setTienCongGomStr(formatMoneyInput(t))}
-                    />
+                    <View style={styles.inputGroup}>
+                        <Input
+                            label="Tiền công gom *"
+                            placeholder="0"
+                            keyboardType="numeric"
+                            value={tienCongGomStr}
+                            onChangeText={(t) => setTienCongGomStr(formatMoneyInput(t))}
+                        />
+                        <View style={styles.quickOptionsContainer}>
+                            {['10.000', '15.000', '20.000', '30.000'].map((amount) => (
+                                <TouchableOpacity
+                                    key={amount}
+                                    style={[
+                                        styles.quickOptionChip,
+                                        tienCongGomStr === amount ? styles.quickOptionChipActive : {}
+                                    ]}
+                                    onPress={() => setTienCongGomStr(amount)}
+                                >
+                                    <Text style={[
+                                        styles.quickOptionText,
+                                        tienCongGomStr === amount ? styles.quickOptionTextActive : {}
+                                    ]}>{amount.replace('.000', 'K')}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
 
                     <Input
                         label="Phí đóng hàng *"
@@ -448,9 +469,23 @@ export default function CreateOrderScreen() {
                 </View>
 
                 {/* Tổng kết */}
-                <View style={styles.summaryBox}>
+                <View style={[styles.summaryBox, { borderBottomWidth: 1, borderBottomColor: theme.colors.border, paddingBottom: 16 }]}>
+                    <Text style={styles.summaryLabel}>Quỹ hiện tại:</Text>
+                    <Text style={[styles.summaryValue, quyConLai < 0 ? styles.negativeValue : {}]}>
+                        {quyConLai.toLocaleString('vi-VN')}đ
+                    </Text>
+                </View>
+
+                <View style={[styles.summaryBox, { marginTop: 16 }]}>
                     <Text style={styles.summaryLabel}>Tổng tiền hóa đơn (khách phải trả):</Text>
                     <Text style={styles.summaryValue}>{tongTienHoaDon.toLocaleString('vi-VN')}đ</Text>
+                </View>
+
+                <View style={[styles.summaryBox, { borderTopWidth: 0, marginTop: 4 }]}>
+                    <Text style={styles.summaryLabel}>Quỹ sau khi tạo đơn (dự kiến):</Text>
+                    <Text style={[styles.summaryValue, (quyConLai - (isNaN(tienHang) ? 0 : tienHang)) < 0 ? styles.negativeValue : {}]}>
+                        {(quyConLai - (isNaN(tienHang) ? 0 : tienHang)).toLocaleString('vi-VN')}đ
+                    </Text>
                 </View>
 
             </ScrollView>
@@ -512,6 +547,36 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: theme.colors.text.primary,
         marginBottom: 12,
+    },
+    inputGroup: {
+        marginBottom: 8,
+    },
+    quickOptionsContainer: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: -12,
+        marginBottom: 16,
+        paddingHorizontal: 4,
+    },
+    quickOptionChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        backgroundColor: '#f3f4f6',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+    quickOptionChipActive: {
+        backgroundColor: theme.colors.primary.light || '#EBF5FF',
+        borderColor: theme.colors.primary.default,
+    },
+    quickOptionText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#6b7280',
+    },
+    quickOptionTextActive: {
+        color: theme.colors.primary.default,
     },
 
     // === Autocomplete styles ===
@@ -649,6 +714,9 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: theme.colors.text.primary,
+    },
+    negativeValue: {
+        color: '#ef4444',
     },
     footer: {
         padding: 16,

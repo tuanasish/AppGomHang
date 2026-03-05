@@ -11,13 +11,16 @@ import {
     Alert,
     Platform,
     ScrollView,
-    RefreshControl
+    RefreshControl,
+    Keyboard,
+    TouchableWithoutFeedback,
+    KeyboardAvoidingView
 } from 'react-native';
 import { showError, showValidationError } from '../../utils/errorHelper';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { theme } from '../../theme/theme';
-import { formatCurrency, formatDate } from '../../utils/helpers';
+import { formatCurrency, formatDate, getLocalDateString } from '../../utils/helpers';
 
 import {
     useShiftsList,
@@ -48,7 +51,7 @@ export default function AdminShiftsScreen({ navigation }) {
     const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'ended'
 
     // Formatted date string for queries
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = getLocalDateString(selectedDate);
     const statusQuery = statusFilter !== 'all' ? statusFilter : undefined;
 
     // Queries
@@ -241,7 +244,7 @@ export default function AdminShiftsScreen({ navigation }) {
 
         const payload = {
             staffId: selectedStaff.id,
-            date: newShiftDate.toISOString().split('T')[0],
+            date: getLocalDateString(newShiftDate),
             tienGiaoCa: tienGiaoCaValue || 0
         };
 
@@ -418,168 +421,177 @@ export default function AdminShiftsScreen({ navigation }) {
                 transparent={true}
                 animationType="fade"
             >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { maxHeight: '80%' }]}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Chi tiết ca - {detailShift?.staffName}</Text>
-                            <TouchableOpacity onPress={() => { setDetailShift(null); setEditingAddition(null); }}>
-                                <Ionicons name="close" size={24} color="#333" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {detailShift && (
-                                <View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Ngày:</Text>
-                                        <Text style={styles.detailValue}>{formatDate(detailShift.date)}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Bắt đầu:</Text>
-                                        <Text style={styles.detailValue}>{formatTimeOnly(detailShift.startTime)}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Kết thúc:</Text>
-                                        <Text style={styles.detailValue}>
-                                            {detailShift.status === 'active' ? 'Đang làm' : formatTimeOnly(detailShift.endTime)}
-                                        </Text>
-                                    </View>
-                                    <View style={{ height: 1, backgroundColor: '#E5E5EA', marginVertical: 12 }} />
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Tiền giao ca:</Text>
-                                        <Text style={[styles.detailValue, { fontWeight: 'bold' }]}>{formatCurrency(detailShift.tienGiaoCa)}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Quỹ còn lại:</Text>
-                                        <Text style={[styles.detailValue, { fontWeight: 'bold', color: theme?.colors?.primary?.default || '#007AFF' }]}>
-                                            {formatCurrency(detailShift.quyConLai)}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Đã trả hàng:</Text>
-                                        <Text style={[styles.detailValue, { fontWeight: 'bold' }]}>{formatCurrency(detailShift.tongTienHangDaTra)}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.detailLabel}>Số đơn:</Text>
-                                        <Text style={[styles.detailValue, { fontWeight: 'bold' }]}>{detailShift.soDonHang}</Text>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.modalOverlay}>
+                            <TouchableWithoutFeedback>
+                                <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+                                    <View style={styles.modalHeader}>
+                                        <Text style={styles.modalTitle}>Chi tiết ca - {detailShift?.staffName}</Text>
+                                        <TouchableOpacity onPress={() => { setDetailShift(null); setEditingAddition(null); }}>
+                                            <Ionicons name="close" size={24} color="#333" />
+                                        </TouchableOpacity>
                                     </View>
 
-                                    {/* Lịch sử thêm tiền (in Detail Shift) */}
-                                    <View style={{ height: 1, backgroundColor: '#E5E5EA', marginVertical: 16 }} />
-                                    <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12, color: '#333' }}>
-                                        Lịch sử sửa tiền giao ca
-                                    </Text>
-                                    {loadingHistory ? (
-                                        <ActivityIndicator size="small" color={theme?.colors?.primary?.default || '#007AFF'} />
-                                    ) : moneyAdditions.length === 0 ? (
-                                        <Text style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 }}>Chưa có lịch sử</Text>
-                                    ) : (
-                                        moneyAdditions.map((addition) => (
-                                            <View key={addition.id} style={{
-                                                backgroundColor: '#F8F9FA',
-                                                borderRadius: 8,
-                                                padding: 12,
-                                                marginBottom: 8,
-                                                borderWidth: 1,
-                                                borderColor: '#E5E5EA'
-                                            }}>
-                                                {editingAddition === addition.id ? (
-                                                    <View>
-                                                        <View style={{ marginBottom: 8 }}>
-                                                            <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Số tiền (VNĐ)</Text>
-                                                            <TextInput
-                                                                style={{
-                                                                    backgroundColor: '#FFF',
-                                                                    borderWidth: 1,
-                                                                    borderColor: '#DDD',
-                                                                    borderRadius: 6,
-                                                                    padding: 8,
-                                                                    fontSize: 14
-                                                                }}
-                                                                value={editAmount}
-                                                                onChangeText={(t) => setEditAmount(formatMoneyInput(t))}
-                                                                keyboardType="numeric"
-                                                                placeholder="VD: 1.000.000"
-                                                            />
-                                                        </View>
-                                                        <View style={{ marginBottom: 8 }}>
-                                                            <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Ghi chú</Text>
-                                                            <TextInput
-                                                                style={{
-                                                                    backgroundColor: '#FFF',
-                                                                    borderWidth: 1,
-                                                                    borderColor: '#DDD',
-                                                                    borderRadius: 6,
-                                                                    padding: 8,
-                                                                    fontSize: 14
-                                                                }}
-                                                                value={editNote}
-                                                                onChangeText={setEditNote}
-                                                                placeholder="Nhập ghi chú"
-                                                            />
-                                                        </View>
-                                                        <View style={{ flexDirection: 'row', gap: 8 }}>
-                                                            <TouchableOpacity
-                                                                style={{ flex: 1, backgroundColor: theme?.colors?.primary?.default || '#007AFF', borderRadius: 6, padding: 8, alignItems: 'center' }}
-                                                                onPress={() => handleEditAddition(addition.id)}
-                                                                disabled={updateAdditionMutation.isPending}
-                                                            >
-                                                                {updateAdditionMutation.isPending && updateAdditionMutation.variables?.additionId === addition.id ? (
-                                                                    <ActivityIndicator size="small" color="#FFF" />
-                                                                ) : (
-                                                                    <Text style={{ color: '#FFF', fontWeight: '600' }}>Lưu</Text>
-                                                                )}
-                                                            </TouchableOpacity>
-                                                            <TouchableOpacity
-                                                                style={{ flex: 1, backgroundColor: '#EEE', borderRadius: 6, padding: 8, alignItems: 'center' }}
-                                                                onPress={() => setEditingAddition(null)}
-                                                            >
-                                                                <Text style={{ color: '#333', fontWeight: '600' }}>Hủy</Text>
-                                                            </TouchableOpacity>
-                                                        </View>
-                                                    </View>
+                                    <ScrollView showsVerticalScrollIndicator={false}>
+                                        {detailShift && (
+                                            <View>
+                                                <View style={styles.detailRow}>
+                                                    <Text style={styles.detailLabel}>Ngày:</Text>
+                                                    <Text style={styles.detailValue}>{formatDate(detailShift.date)}</Text>
+                                                </View>
+                                                <View style={styles.detailRow}>
+                                                    <Text style={styles.detailLabel}>Bắt đầu:</Text>
+                                                    <Text style={styles.detailValue}>{formatTimeOnly(detailShift.startTime)}</Text>
+                                                </View>
+                                                <View style={styles.detailRow}>
+                                                    <Text style={styles.detailLabel}>Kết thúc:</Text>
+                                                    <Text style={styles.detailValue}>
+                                                        {detailShift.status === 'active' ? 'Đang làm' : formatTimeOnly(detailShift.endTime)}
+                                                    </Text>
+                                                </View>
+                                                <View style={{ height: 1, backgroundColor: '#E5E5EA', marginVertical: 12 }} />
+                                                <View style={styles.detailRow}>
+                                                    <Text style={styles.detailLabel}>Tiền giao ca:</Text>
+                                                    <Text style={[styles.detailValue, { fontWeight: 'bold' }]}>{formatCurrency(detailShift.tienGiaoCa)}</Text>
+                                                </View>
+                                                <View style={styles.detailRow}>
+                                                    <Text style={styles.detailLabel}>Quỹ còn lại:</Text>
+                                                    <Text style={[styles.detailValue, { fontWeight: 'bold', color: theme?.colors?.primary?.default || '#007AFF' }]}>
+                                                        {formatCurrency(detailShift.quyConLai)}
+                                                    </Text>
+                                                </View>
+                                                <View style={styles.detailRow}>
+                                                    <Text style={styles.detailLabel}>Đã trả hàng:</Text>
+                                                    <Text style={[styles.detailValue, { fontWeight: 'bold' }]}>{formatCurrency(detailShift.tongTienHangDaTra)}</Text>
+                                                </View>
+                                                <View style={styles.detailRow}>
+                                                    <Text style={styles.detailLabel}>Số đơn:</Text>
+                                                    <Text style={[styles.detailValue, { fontWeight: 'bold' }]}>{detailShift.soDonHang}</Text>
+                                                </View>
+
+                                                {/* Lịch sử thêm tiền (in Detail Shift) */}
+                                                <View style={{ height: 1, backgroundColor: '#E5E5EA', marginVertical: 16 }} />
+                                                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12, color: '#333' }}>
+                                                    Lịch sử sửa tiền giao ca
+                                                </Text>
+                                                {loadingHistory ? (
+                                                    <ActivityIndicator size="small" color={theme?.colors?.primary?.default || '#007AFF'} />
+                                                ) : moneyAdditions.length === 0 ? (
+                                                    <Text style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 }}>Chưa có lịch sử</Text>
                                                 ) : (
-                                                    <View>
-                                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#333' }}>+{formatCurrency(addition.amount)}</Text>
-                                                            <View style={{ flexDirection: 'row', gap: 8 }}>
-                                                                <TouchableOpacity
-                                                                    onPress={() => {
-                                                                        setEditingAddition(addition.id);
-                                                                        setEditAmount(formatMoneyInput(String(addition.amount)));
-                                                                        setEditNote(addition.note || '');
-                                                                    }}
-                                                                >
-                                                                    <Ionicons name="pencil" size={18} color={theme?.colors?.primary?.default || '#007AFF'} />
-                                                                </TouchableOpacity>
-                                                                <TouchableOpacity onPress={() => handleDeleteAddition(addition.id)}>
-                                                                    <Ionicons name="trash" size={18} color="#F44336" />
-                                                                </TouchableOpacity>
-                                                            </View>
+                                                    moneyAdditions.map((addition) => (
+                                                        <View key={addition.id} style={{
+                                                            backgroundColor: '#F8F9FA',
+                                                            borderRadius: 8,
+                                                            padding: 12,
+                                                            marginBottom: 8,
+                                                            borderWidth: 1,
+                                                            borderColor: '#E5E5EA'
+                                                        }}>
+                                                            {editingAddition === addition.id ? (
+                                                                <View>
+                                                                    <View style={{ marginBottom: 8 }}>
+                                                                        <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Số tiền (VNĐ)</Text>
+                                                                        <TextInput
+                                                                            style={{
+                                                                                backgroundColor: '#FFF',
+                                                                                borderWidth: 1,
+                                                                                borderColor: '#DDD',
+                                                                                borderRadius: 6,
+                                                                                padding: 8,
+                                                                                fontSize: 14
+                                                                            }}
+                                                                            value={editAmount}
+                                                                            onChangeText={(t) => setEditAmount(formatMoneyInput(t))}
+                                                                            keyboardType="numeric"
+                                                                            placeholder="VD: 1.000.000"
+                                                                        />
+                                                                    </View>
+                                                                    <View style={{ marginBottom: 8 }}>
+                                                                        <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Ghi chú</Text>
+                                                                        <TextInput
+                                                                            style={{
+                                                                                backgroundColor: '#FFF',
+                                                                                borderWidth: 1,
+                                                                                borderColor: '#DDD',
+                                                                                borderRadius: 6,
+                                                                                padding: 8,
+                                                                                fontSize: 14
+                                                                            }}
+                                                                            value={editNote}
+                                                                            onChangeText={setEditNote}
+                                                                            placeholder="Nhập ghi chú"
+                                                                        />
+                                                                    </View>
+                                                                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                                                                        <TouchableOpacity
+                                                                            style={{ flex: 1, backgroundColor: theme?.colors?.primary?.default || '#007AFF', borderRadius: 6, padding: 8, alignItems: 'center' }}
+                                                                            onPress={() => handleEditAddition(addition.id)}
+                                                                            disabled={updateAdditionMutation.isPending}
+                                                                        >
+                                                                            {updateAdditionMutation.isPending && updateAdditionMutation.variables?.additionId === addition.id ? (
+                                                                                <ActivityIndicator size="small" color="#FFF" />
+                                                                            ) : (
+                                                                                <Text style={{ color: '#FFF', fontWeight: '600' }}>Lưu</Text>
+                                                                            )}
+                                                                        </TouchableOpacity>
+                                                                        <TouchableOpacity
+                                                                            style={{ flex: 1, backgroundColor: '#EEE', borderRadius: 6, padding: 8, alignItems: 'center' }}
+                                                                            onPress={() => setEditingAddition(null)}
+                                                                        >
+                                                                            <Text style={{ color: '#333', fontWeight: '600' }}>Hủy</Text>
+                                                                        </TouchableOpacity>
+                                                                    </View>
+                                                                </View>
+                                                            ) : (
+                                                                <View>
+                                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                        <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#333' }}>+{formatCurrency(addition.amount)}</Text>
+                                                                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                                                                            <TouchableOpacity
+                                                                                onPress={() => {
+                                                                                    setEditingAddition(addition.id);
+                                                                                    setEditAmount(formatMoneyInput(String(addition.amount)));
+                                                                                    setEditNote(addition.note || '');
+                                                                                }}
+                                                                            >
+                                                                                <Ionicons name="pencil" size={18} color={theme?.colors?.primary?.default || '#007AFF'} />
+                                                                            </TouchableOpacity>
+                                                                            <TouchableOpacity onPress={() => handleDeleteAddition(addition.id)}>
+                                                                                <Ionicons name="trash" size={18} color="#F44336" />
+                                                                            </TouchableOpacity>
+                                                                        </View>
+                                                                    </View>
+                                                                    {addition.note && (
+                                                                        <Text style={{ fontSize: 13, color: '#666', marginTop: 4 }}>{addition.note}</Text>
+                                                                    )}
+                                                                    <Text style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+                                                                        {new Date(addition.createdAt).toLocaleString('vi-VN')}
+                                                                    </Text>
+                                                                </View>
+                                                            )}
                                                         </View>
-                                                        {addition.note && (
-                                                            <Text style={{ fontSize: 13, color: '#666', marginTop: 4 }}>{addition.note}</Text>
-                                                        )}
-                                                        <Text style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
-                                                            {new Date(addition.createdAt).toLocaleString('vi-VN')}
-                                                        </Text>
-                                                    </View>
+                                                    ))
                                                 )}
                                             </View>
-                                        ))
-                                    )}
-                                </View>
-                            )}
-                        </ScrollView>
+                                        )}
+                                    </ScrollView>
 
-                        <TouchableOpacity
-                            style={[styles.submitButton, { marginTop: 16 }]}
-                            onPress={() => { setDetailShift(null); setEditingAddition(null); }}
-                        >
-                            <Text style={styles.submitButtonText}>Đóng</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
+                                    <TouchableOpacity
+                                        style={[styles.submitButton, { marginTop: 16 }]}
+                                        onPress={() => { setDetailShift(null); setEditingAddition(null); }}
+                                    >
+                                        <Text style={styles.submitButtonText}>Đóng</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </TouchableWithoutFeedback>
+                        </View>
+                    </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Modal Sửa Tiền Giao Ca (Add Money) */}
@@ -588,200 +600,213 @@ export default function AdminShiftsScreen({ navigation }) {
                 transparent={true}
                 animationType="slide"
             >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { maxHeight: '85%' }]}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Sửa tiền giao ca</Text>
-                            <TouchableOpacity onPress={closeMoneyModal}>
-                                <Ionicons name="close" size={24} color="#333" />
-                            </TouchableOpacity>
-                        </View>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.modalOverlay}>
+                            <TouchableWithoutFeedback>
+                                <View style={[styles.modalContent, { maxHeight: '85%' }]}>
+                                    <View style={styles.modalHeader}>
+                                        <Text style={styles.modalTitle}>Sửa tiền giao ca</Text>
+                                        <TouchableOpacity onPress={closeMoneyModal}>
+                                            <Ionicons name="close" size={24} color="#333" />
+                                        </TouchableOpacity>
+                                    </View>
 
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {selectedShiftForMoney && (
-                                <Text style={styles.modalSubtitle}>
-                                    Nhân viên: <Text style={{ fontWeight: 'bold' }}>{selectedShiftForMoney.staffName}</Text>
-                                </Text>
-                            )}
+                                    <ScrollView showsVerticalScrollIndicator={false}>
+                                        {selectedShiftForMoney && (
+                                            <Text style={styles.modalSubtitle}>
+                                                Nhân viên: <Text style={{ fontWeight: 'bold' }}>{selectedShiftForMoney.staffName}</Text>
+                                            </Text>
+                                        )}
 
-                            <View style={styles.formGroup}>
-                                <Text style={styles.label}>Số tiền cần thêm (VNĐ) *</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={moneyAmount}
-                                    onChangeText={(t) => setMoneyAmount(formatMoneyInput(t))}
-                                    placeholder="VD: 100.000"
-                                    placeholderTextColor={theme.colors.text.hint}
-                                    keyboardType="numeric"
-                                />
-                            </View>
+                                        <View style={styles.formGroup}>
+                                            <Text style={styles.label}>Số tiền cần thêm (VNĐ) *</Text>
+                                            <TextInput
+                                                style={styles.input}
+                                                value={moneyAmount}
+                                                onChangeText={(t) => setMoneyAmount(formatMoneyInput(t))}
+                                                placeholder="VD: 100.000"
+                                                placeholderTextColor={theme.colors.text.hint}
+                                                keyboardType="numeric"
+                                            />
+                                        </View>
 
-                            <View style={styles.formGroup}>
-                                <Text style={styles.label}>Ghi chú</Text>
-                                <TextInput
-                                    style={[styles.input, { height: 80 }]}
-                                    value={moneyNote}
-                                    onChangeText={setMoneyNote}
-                                    placeholder="Nhập lý do thêm tiền (không bắt buộc)"
-                                    placeholderTextColor={theme.colors.text.hint}
-                                    multiline
-                                    textAlignVertical="top"
-                                />
-                            </View>
+                                        <View style={styles.formGroup}>
+                                            <Text style={styles.label}>Ghi chú</Text>
+                                            <TextInput
+                                                style={[styles.input, { height: 80 }]}
+                                                value={moneyNote}
+                                                onChangeText={setMoneyNote}
+                                                placeholder="Nhập lý do thêm tiền (không bắt buộc)"
+                                                placeholderTextColor={theme.colors.text.hint}
+                                                multiline
+                                                textAlignVertical="top"
+                                            />
+                                        </View>
 
-                            <TouchableOpacity
-                                style={styles.submitButton}
-                                onPress={handleUpdateMoney}
-                                disabled={addMoneyMutation.isPending}
-                            >
-                                {addMoneyMutation.isPending ? (
-                                    <ActivityIndicator color="#FFF" />
-                                ) : (
-                                    <Text style={styles.submitButtonText}>Xác nhận thêm tiền</Text>
-                                )}
-                            </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.submitButton}
+                                            onPress={handleUpdateMoney}
+                                            disabled={addMoneyMutation.isPending}
+                                        >
+                                            {addMoneyMutation.isPending ? (
+                                                <ActivityIndicator color="#FFF" />
+                                            ) : (
+                                                <Text style={styles.submitButtonText}>Xác nhận thêm tiền</Text>
+                                            )}
+                                        </TouchableOpacity>
 
-                            {/* Lịch sử thêm tiền (in Add Money context) */}
-                            <View style={{ height: 1, backgroundColor: '#E5E5EA', marginVertical: 16 }} />
-                            <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12, color: '#333' }}>
-                                Lịch sử thêm tiền
-                            </Text>
+                                        {/* Lịch sử thêm tiền (in Add Money context) */}
+                                        <View style={{ height: 1, backgroundColor: '#E5E5EA', marginVertical: 16 }} />
+                                        <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12, color: '#333' }}>
+                                            Lịch sử thêm tiền
+                                        </Text>
 
-                            {loadingHistory ? (
-                                <ActivityIndicator size="small" color={theme?.colors?.primary?.default || '#007AFF'} />
-                            ) : moneyAdditions.length === 0 ? (
-                                <Text style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 }}>Chưa có lịch sử thêm tiền</Text>
-                            ) : (
-                                moneyAdditions.map((addition) => (
-                                    <View key={addition.id} style={{
-                                        backgroundColor: '#F8F9FA',
-                                        borderRadius: 8,
-                                        padding: 12,
-                                        marginBottom: 8,
-                                        borderWidth: 1,
-                                        borderColor: '#E5E5EA'
-                                    }}>
-                                        <View>
-                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#333' }}>+{formatCurrency(addition.amount)}</Text>
-                                                {/* Edit triggers are removed in this context to keep it simpler, they can do it in Detail view.
+                                        {loadingHistory ? (
+                                            <ActivityIndicator size="small" color={theme?.colors?.primary?.default || '#007AFF'} />
+                                        ) : moneyAdditions.length === 0 ? (
+                                            <Text style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 }}>Chưa có lịch sử thêm tiền</Text>
+                                        ) : (
+                                            moneyAdditions.map((addition) => (
+                                                <View key={addition.id} style={{
+                                                    backgroundColor: '#F8F9FA',
+                                                    borderRadius: 8,
+                                                    padding: 12,
+                                                    marginBottom: 8,
+                                                    borderWidth: 1,
+                                                    borderColor: '#E5E5EA'
+                                                }}>
+                                                    <View>
+                                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#333' }}>+{formatCurrency(addition.amount)}</Text>
+                                                            {/* Edit triggers are removed in this context to keep it simpler, they can do it in Detail view.
                                                     Alternatively we can duplicate the edit block here. Since logic uses detailShift, 
                                                     we let them do full edit in DetailShift modal instead. */}
-                                            </View>
-                                            {addition.note && (
-                                                <Text style={{ fontSize: 13, color: '#666', marginTop: 4 }}>{addition.note}</Text>
-                                            )}
-                                            <Text style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
-                                                {new Date(addition.createdAt).toLocaleString('vi-VN')}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                ))
-                            )}
-                        </ScrollView>
-                    </View>
-                </View>
+                                                        </View>
+                                                        {addition.note && (
+                                                            <Text style={{ fontSize: 13, color: '#666', marginTop: 4 }}>{addition.note}</Text>
+                                                        )}
+                                                        <Text style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+                                                            {new Date(addition.createdAt).toLocaleString('vi-VN')}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            ))
+                                        )}
+                                    </ScrollView>
+                                </View>
+                            </TouchableWithoutFeedback>
+                        </View>
+                    </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
             </Modal>
 
-            {/* Modal Tạo Ca Mới */}
+            {/* Modal Tạo Ca Mới (Tích hợp luôn Staff Picker để tránh lỗi 2 Modals trên iOS) */}
             <Modal
                 visible={createModalVisible}
                 transparent={true}
                 animationType="slide"
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Tạo ca làm việc mới</Text>
-                            <TouchableOpacity onPress={() => setCreateModalVisible(false)}>
-                                <Ionicons name="close" size={24} color="#333" />
-                            </TouchableOpacity>
-                        </View>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={styles.modalOverlay}>
+                            <TouchableWithoutFeedback>
+                                <View style={[styles.modalContent, showStaffPicker ? { maxHeight: '80%' } : {}]}>
+                                    {showStaffPicker ? (
+                                        <View style={{ width: '100%' }}>
+                                            <View style={styles.modalHeader}>
+                                                <Text style={styles.modalTitle}>Chọn nhân viên</Text>
+                                                <TouchableOpacity onPress={() => setShowStaffPicker(false)}>
+                                                    <Ionicons name="close" size={24} color="#333" />
+                                                </TouchableOpacity>
+                                            </View>
+                                            <FlatList
+                                                data={staffArray}
+                                                keyExtractor={(item) => item.id}
+                                                renderItem={({ item }) => (
+                                                    <TouchableOpacity
+                                                        style={{ paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F2F2F7' }}
+                                                        onPress={() => {
+                                                            setSelectedStaff(item);
+                                                            setShowStaffPicker(false);
+                                                        }}
+                                                    >
+                                                        <Text style={{ fontSize: 16, fontWeight: '500', color: '#000' }}>{item.name}</Text>
+                                                        <Text style={{ fontSize: 13, color: '#666' }}>{item.email || 'Không có email'}</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                                ListEmptyComponent={
+                                                    <Text style={{ textAlign: 'center', color: '#999', marginTop: 20 }}>
+                                                        Chưa có dữ liệu nhân viên
+                                                    </Text>
+                                                }
+                                            />
+                                        </View>
+                                    ) : (
+                                        <View style={{ width: '100%' }}>
+                                            <View style={styles.modalHeader}>
+                                                <Text style={styles.modalTitle}>Tạo ca làm việc mới</Text>
+                                                <TouchableOpacity onPress={() => setCreateModalVisible(false)}>
+                                                    <Ionicons name="close" size={24} color="#333" />
+                                                </TouchableOpacity>
+                                            </View>
 
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Ngày làm việc</Text>
-                            <View style={styles.input}>
-                                <Text>{formatDate(newShiftDate)}</Text>
-                            </View>
-                        </View>
+                                            <View style={styles.formGroup}>
+                                                <Text style={styles.label}>Ngày làm việc</Text>
+                                                <View style={styles.input}>
+                                                    <Text>{formatDate(newShiftDate)}</Text>
+                                                </View>
+                                            </View>
 
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Nhân viên *</Text>
-                            <TouchableOpacity
-                                style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between' }]}
-                                onPress={() => setShowStaffPicker(true)}
-                            >
-                                <Text style={{ color: selectedStaff ? '#000' : '#999' }}>
-                                    {selectedStaff ? selectedStaff.name : 'Chọn nhân viên'}
-                                </Text>
-                                <Ionicons name="chevron-down" size={20} color="#666" />
-                            </TouchableOpacity>
-                        </View>
+                                            <View style={styles.formGroup}>
+                                                <Text style={styles.label}>Nhân viên *</Text>
+                                                <TouchableOpacity
+                                                    style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between' }]}
+                                                    onPress={() => setShowStaffPicker(true)}
+                                                >
+                                                    <Text style={{ color: selectedStaff ? '#000' : '#999' }}>
+                                                        {selectedStaff ? selectedStaff.name : 'Chọn nhân viên'}
+                                                    </Text>
+                                                    <Ionicons name="chevron-down" size={20} color="#666" />
+                                                </TouchableOpacity>
+                                            </View>
 
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Tiền giao ca ban đầu (VNĐ)</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={newShiftMoney}
-                                onChangeText={(t) => setNewShiftMoney(formatMoneyInput(t))}
-                                placeholder="VD: 1.000.000"
-                                placeholderTextColor={theme.colors.text.hint}
-                                keyboardType="numeric"
-                            />
-                        </View>
+                                            <View style={styles.formGroup}>
+                                                <Text style={styles.label}>Tiền giao ca ban đầu (VNĐ)</Text>
+                                                <TextInput
+                                                    style={styles.input}
+                                                    value={newShiftMoney}
+                                                    onChangeText={(t) => setNewShiftMoney(formatMoneyInput(t))}
+                                                    placeholder="VD: 1.000.000"
+                                                    placeholderTextColor={theme.colors.text.hint}
+                                                    keyboardType="numeric"
+                                                />
+                                            </View>
 
-                        <TouchableOpacity
-                            style={styles.submitButton}
-                            onPress={handleCreateShift}
-                            disabled={createShiftMutation.isPending}
-                        >
-                            {createShiftMutation.isPending ? (
-                                <ActivityIndicator color="#FFF" />
-                            ) : (
-                                <Text style={styles.submitButtonText}>Tạo Ca</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
-
-            {/* Staff Picker Modal */}
-            <Modal
-                visible={showStaffPicker}
-                transparent={true}
-                animationType="fade"
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { maxHeight: '60%' }]}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Chọn nhân viên</Text>
-                            <TouchableOpacity onPress={() => setShowStaffPicker(false)}>
-                                <Ionicons name="close" size={24} color="#333" />
-                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.submitButton}
+                                                onPress={handleCreateShift}
+                                                disabled={createShiftMutation.isPending}
+                                            >
+                                                {createShiftMutation.isPending ? (
+                                                    <ActivityIndicator color="#FFF" />
+                                                ) : (
+                                                    <Text style={styles.submitButtonText}>Tạo Ca</Text>
+                                                )}
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </View>
+                            </TouchableWithoutFeedback>
                         </View>
-                        <FlatList
-                            data={staffArray}
-                            keyExtractor={(item) => item.id}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={{ paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F2F2F7' }}
-                                    onPress={() => {
-                                        setSelectedStaff(item);
-                                        setShowStaffPicker(false);
-                                    }}
-                                >
-                                    <Text style={{ fontSize: 16, fontWeight: '500', color: '#000' }}>{item.name}</Text>
-                                    <Text style={{ fontSize: 13, color: '#666' }}>{item.email || 'Không có email'}</Text>
-                                </TouchableOpacity>
-                            )}
-                            ListEmptyComponent={
-                                <Text style={{ textAlign: 'center', color: '#999', marginTop: 20 }}>
-                                    Chưa có dữ liệu nhân viên
-                                </Text>
-                            }
-                        />
-                    </View>
-                </View>
+                    </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );

@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView, Keyboard, TouchableWithoutFeedback, KeyboardAvoidingView, Platform } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import { theme } from '../theme/theme';
 const LoginScreen = () => {
@@ -57,41 +57,48 @@ const LoginScreen = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.formContainer}>
-                <Text style={styles.title}>Gom Hàng Ninh Hiệp</Text>
-                <Text style={styles.subtitle}>Ứng dụng nội bộ</Text>
-
-                <TextInput
-                    style={styles.input}
-                    placeholder="Email nội bộ"
-                    placeholderTextColor={theme.colors.text.hint}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    value={email}
-                    onChangeText={setEmail}
-                />
-
-                <TextInput
-                    style={styles.input}
-                    placeholder="Mật khẩu"
-                    placeholderTextColor={theme.colors.text.hint}
-                    secureTextEntry
-                    value={password}
-                    onChangeText={setPassword}
-                />
-
-                <TouchableOpacity
-                    style={styles.button}
-                    onPress={handleLogin}
-                    disabled={isLoading}
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1, justifyContent: 'center' }}
                 >
-                    {isLoading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.buttonText}>Đăng nhập</Text>
-                    )}
-                </TouchableOpacity>
-            </View>
+                    <View style={styles.formContainer}>
+                        <Text style={styles.title}>Gom Hàng Ninh Hiệp</Text>
+                        <Text style={styles.subtitle}>Ứng dụng nội bộ</Text>
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Email nội bộ"
+                            placeholderTextColor={theme.colors.text.hint}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            value={email}
+                            onChangeText={setEmail}
+                        />
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Mật khẩu"
+                            placeholderTextColor={theme.colors.text.hint}
+                            secureTextEntry
+                            value={password}
+                            onChangeText={setPassword}
+                        />
+
+                        <TouchableOpacity
+                            style={styles.button}
+                            onPress={handleLogin}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.buttonText}>Đăng nhập</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </KeyboardAvoidingView>
+            </TouchableWithoutFeedback>
         </SafeAreaView>
     );
 };
