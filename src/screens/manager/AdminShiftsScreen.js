@@ -206,7 +206,7 @@ export default function AdminShiftsScreen({ navigation }) {
         }
 
         updateAdditionMutation.mutate(
-            { shiftId: detailShift.id, additionId, updateData: { amount, note: editNote || null } },
+            { shiftId: detailShift.id, additionId, data: { amount, note: editNote || null } },
             {
                 onSuccess: () => {
                     Alert.alert('Thành công', 'Đã cập nhật lịch sử thêm tiền');
