@@ -84,6 +84,17 @@ export default function CreateOrderScreen() {
         setCustomerName(c.name);
         setCustomerId(c.id);
         setShowCustomerDropdown(false);
+        // Tự động điền thuế mặc định và công gom mặc định
+        if (c.address) {
+            setThueStr(c.address.toString());
+        } else {
+            setThueStr('0');
+        }
+        if (c.defaultTienCongGom !== undefined && c.defaultTienCongGom !== null) {
+            setTienCongGomStr(formatMoneyInput(c.defaultTienCongGom.toString()));
+        } else {
+            setTienCongGomStr('0');
+        }
     };
 
     // === Counter autocomplete ===
@@ -122,8 +133,10 @@ export default function CreateOrderScreen() {
     };
 
     const parseMoneyValue = (value) => {
-        const normalized = value.replace(/\./g, '');
-        return normalized ? Number(normalized) : NaN;
+        if (!value) return 0;
+        const normalized = value.toString().replace(/\./g, '');
+        const parsed = Number(normalized);
+        return isNaN(parsed) ? 0 : parsed;
     };
 
     const tienHang = parseMoneyValue(tienHangStr);
@@ -146,8 +159,27 @@ export default function CreateOrderScreen() {
             return;
         }
 
-        setIsSaving(true);
         try {
+            if (!customerName || !counterName) {
+                Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin khách hàng và quầy');
+                return;
+            }
+
+            if (isNaN(tienHang) || tienHang < 0) {
+                Alert.alert('Lỗi', 'Tiền hàng không hợp lệ');
+                return;
+            }
+
+            if (!customerId) {
+                Alert.alert(
+                    'Không thể tạo khách hàng mới',
+                    'Chỉ có quản lý mới được phép tạo khách hàng mới. Vui lòng liên hệ quản lý để thêm khách hàng này.',
+                    [{ text: 'Đã hiểu' }]
+                );
+                return;
+            }
+
+            setIsSaving(true);
             const payload = {
                 shiftId: currentShiftId,
                 customerId: customerId || undefined,
@@ -300,7 +332,7 @@ export default function CreateOrderScreen() {
                                 isLoading={false}
                                 onSelect={selectCustomer}
                                 type="customer"
-                                emptyText="Không tìm thấy — sẽ tạo khách mới"
+                                emptyText="Không tìm thấy — liên hệ quản lý để thêm khách"
                             />
                         )}
                     </View>
@@ -391,7 +423,7 @@ export default function CreateOrderScreen() {
 
                     <View style={styles.inputGroup}>
                         <Input
-                            label="Tiền công gom *"
+                            label="Phí gom *"
                             placeholder="0"
                             keyboardType="numeric"
                             value={tienCongGomStr}
@@ -477,7 +509,7 @@ export default function CreateOrderScreen() {
                 </View>
 
                 <View style={[styles.summaryBox, { marginTop: 16 }]}>
-                    <Text style={styles.summaryLabel}>Tổng tiền hóa đơn (khách phải trả):</Text>
+                    <Text style={styles.summaryLabel}>Tổng tiền hóa đơn:</Text>
                     <Text style={styles.summaryValue}>{tongTienHoaDon.toLocaleString('vi-VN')}đ</Text>
                 </View>
 

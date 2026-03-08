@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
-import * as Print from 'expo-print';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform, TextInput, Modal } from 'react-native';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
+import ViewShot, { captureRef } from 'react-native-view-shot';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../theme/theme';
 import Button from '../../components/common/Button';
-import { getOrderByIdAPI } from '../../api/orders';
+import { getOrderByIdAPI, updateOrderAPI } from '../../api/orders';
 const { spacing, typography, borderRadius } = theme;
 const colors = {
     background: theme.colors.background.light,
@@ -45,7 +44,23 @@ const OrderDetailScreen = () => {
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+    const [isExportingImage, setIsExportingImage] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
+    const invoiceRef = React.useRef();
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [editForm, setEditForm] = useState({
+        tienHang: 0,
+        tienCongGom: 0,
+        phiDongHang: 0,
+        tienThem: 0,
+        loaiTienThem: '',
+    });
+
+    const [thueStr, setThueStr] = useState('');
+    const currentTienHang = Number(editForm.tienHang) || 0;
+    const thuePhanTram = thueStr ? parseFloat(thueStr.replace(',', '.')) : 0;
+    const tienThue = !isNaN(thuePhanTram) && !isNaN(currentTienHang) ? Math.round(currentTienHang * thuePhanTram / 100) : 0;
 
     useEffect(() => {
         loadOrder();
@@ -83,271 +98,162 @@ const OrderDetailScreen = () => {
         return `${timeStr} - ${dateStr}`;
     };
 
-    const handleExportPDF = async () => {
+    const handleExportImage = async () => {
         if (!order) return;
-        setIsGeneratingPDF(true);
+        setIsExportingImage(true);
         try {
-            const removeDiacritics = (str) => {
-                if (!str) return '';
-                return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
-            };
-
-            const dateObj = new Date(order.createdAt || order.ngayLamGom);
-            const formattedDate = dateObj.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-
-            const htmlString = `
-                <html>
-                <head>
-                    <meta charset="utf-8" />
-                    <style>
-                        @page { size: A4; margin: 15mm; }
-                        * { margin: 0; padding: 0; box-sizing: border-box; }
-                        body { 
-                            font-family: 'Segoe UI', Arial, sans-serif; 
-                            padding: 40px 50px; 
-                            color: #1a1a1a; 
-                            font-size: 15px; 
-                            line-height: 1.6;
-                        }
-                        .header { 
-                            margin-bottom: 10px;
-                            padding-bottom: 15px;
-                            border-bottom: 3px solid #2563eb;
-                        }
-                        .header-top {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: flex-start;
-                        }
-                        .company-name { 
-                            font-size: 22px; 
-                            font-weight: bold; 
-                            color: #2563eb; 
-                            margin-bottom: 4px; 
-                        }
-                        .company-info { 
-                            font-size: 13px; 
-                            margin-bottom: 2px; 
-                            color: #666; 
-                        }
-                        .invoice-title { 
-                            font-size: 24px; 
-                            font-weight: bold; 
-                            color: #1a1a1a;
-                            text-align: right;
-                            padding-top: 5px;
-                        }
-                        .invoice-date { 
-                            text-align: right; 
-                            margin-bottom: 25px; 
-                            margin-top: 10px;
-                            font-size: 14px; 
-                            color: #444;
-                        }
-                        .section-title { 
-                            font-size: 17px; 
-                            font-weight: bold; 
-                            margin-bottom: 10px; 
-                            color: #2563eb;
-                        }
-                        .customer-info { 
-                            margin-bottom: 25px; 
-                            font-size: 15px; 
-                            line-height: 1.8;
-                        }
-                        .customer-info p { margin-bottom: 4px; }
-                        .table { 
-                            width: 100%; 
-                            border-collapse: collapse; 
-                            margin-bottom: 30px; 
-                        }
-                        .table-header { 
-                            background-color: #f0f4ff; 
-                            font-weight: bold; 
-                            font-size: 14px;
-                            color: #1a1a1a;
-                            border-bottom: 2px solid #2563eb;
-                        }
-                        .table-header td { 
-                            padding: 10px 8px; 
-                        }
-                        .table-row { 
-                            border-bottom: 1px solid #e0e0e0; 
-                            font-size: 14px; 
-                        }
-                        .table-row td { 
-                            padding: 10px 8px; 
-                        }
-                        .col-stt { width: 8%; text-align: center; }
-                        .col-desc { width: 32%; }
-                        .col-qty { width: 15%; text-align: center; }
-                        .col-price { width: 22%; text-align: right; }
-                        .col-total { width: 23%; text-align: right; }
-                        .summary { 
-                            margin-top: 10px; 
-                            margin-bottom: 10px;
-                        }
-                        .summary-row { 
-                            display: flex; 
-                            justify-content: space-between; 
-                            margin-bottom: 8px; 
-                            font-size: 15px; 
-                        }
-                        .summary-label { font-weight: 600; color: #333; }
-                        .divider { 
-                            border-bottom: 2px solid #1a1a1a; 
-                            margin-top: 15px; 
-                            margin-bottom: 15px; 
-                        }
-                        .total-row { 
-                            display: flex; 
-                            justify-content: space-between; 
-                            font-size: 20px; 
-                            font-weight: bold; 
-                            color: #2563eb;
-                            padding: 8px 0;
-                        }
-                        .footer { 
-                            margin-top: 50px; 
-                            text-align: center; 
-                            font-size: 13px; 
-                            color: #333; 
-                            padding-top: 15px;
-                            border-top: 1px solid #e0e0e0;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <div class="header-top">
-                            <div>
-                                <div class="company-name">Gom Hang Ninh Hiep</div>
-                                <div class="company-info">${removeDiacritics('Ninh Hiep, Gia Lam, Ha Noi')}</div>
-                                <div class="company-info">0922238683</div>
-                            </div>
-                            <div class="invoice-title">${removeDiacritics('HOA DON BAN HANG')}</div>
-                        </div>
-                    </div>
-
-                    <div class="invoice-date">
-                        <b>${removeDiacritics('Ngay: ')}</b>${formattedDate}
-                    </div>
-
-                    <div class="customer-info">
-                        <div class="section-title">${removeDiacritics('Thong tin khach hang')}</div>
-                        <p><b>${removeDiacritics('Ten: ')}</b>${removeDiacritics(order.customerName || 'N/A')}</p>
-                        ${order.customerPhone ? `<p><b>SDT: </b>${order.customerPhone}</p>` : ''}
-                        ${order.counterName ? `<p><b>${removeDiacritics('Quay/Vi tri: ')}</b>${removeDiacritics(order.counterName)}</p>` : ''}
-                    </div>
-
-                    <table class="table">
-                        <tr class="table-header">
-                            <td class="col-stt">STT</td>
-                            <td class="col-desc">${removeDiacritics('Mo ta')}</td>
-                            <td class="col-qty">${removeDiacritics('So luong')}</td>
-                            <td class="col-price">${removeDiacritics('Don gia')}</td>
-                            <td class="col-total">${removeDiacritics('Thanh tien')}</td>
-                        </tr>
-                        <tr class="table-row">
-                            <td class="col-stt">1</td>
-                            <td class="col-desc">${removeDiacritics('Dich vu gom hang')}</td>
-                            <td class="col-qty">1</td>
-                            <td class="col-price">${(order.tongTienHoaDon || 0).toLocaleString('vi-VN')}d</td>
-                            <td class="col-total">${(order.tongTienHoaDon || 0).toLocaleString('vi-VN')}d</td>
-                        </tr>
-                    </table>
-
-                    <div class="summary">
-                        <div class="section-title">${removeDiacritics('Chi tiet thanh toan')}</div>
-                        <div class="summary-row">
-                            <span class="summary-label">${removeDiacritics('Tien hang:')}</span>
-                            <span>${(order.tienHang || 0).toLocaleString('vi-VN')}d</span>
-                        </div>
-                        <div class="summary-row">
-                            <span class="summary-label">${removeDiacritics('Tien cong gom:')}</span>
-                            <span>${(order.tienCongGom || 0).toLocaleString('vi-VN')}d</span>
-                        </div>
-                        <div class="summary-row">
-                            <span class="summary-label">${removeDiacritics('Phi dong hang:')}</span>
-                            <span>${(order.phiDongHang || 0).toLocaleString('vi-VN')}d</span>
-                        </div>
-                        ${order.tienHoaHong > 0 ? `
-                        <div class="summary-row">
-                            <span class="summary-label">${removeDiacritics('Tien hoa hong:')}</span>
-                            <span>${(order.tienHoaHong || 0).toLocaleString('vi-VN')}d</span>
-                        </div>` : ''}
-                        ${order.tienThem && order.tienThem > 0 ? `
-                        <div class="summary-row">
-                            <span class="summary-label">${removeDiacritics(order.loaiTienThem || 'Tien them')}:</span>
-                            <span>${(order.tienThem || 0).toLocaleString('vi-VN')}d</span>
-                        </div>` : ''}
-                        
-                        <div class="divider"></div>
-                    </div>
-
-                    <div class="total-row">
-                        <span>${removeDiacritics('TONG TIEN:')}</span>
-                        <span>${(order.tongTienHoaDon || 0).toLocaleString('vi-VN')}d</span>
-                    </div>
-
-                    <div class="footer">
-                        <p>${removeDiacritics('Cam on quy khach da su dung dich vu!')}</p>
-                        <p>${removeDiacritics('Hotline ho tro:')} 0922238683</p>
-                    </div>
-                </body>
-                </html>
-            `;
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             if (Platform.OS === 'web') {
-                // Open HTML in new tab via Blob URL - reliable approach with full CSS
-                const blob = new Blob([htmlString], { type: 'text/html;charset=utf-8' });
-                const blobUrl = URL.createObjectURL(blob);
-                const printWindow = window.open(blobUrl, '_blank');
+                try {
+                    const html2canvas = require('html2canvas');
+                    const element = document.getElementById('order-invoice-capture');
+                    if (!element) {
+                        console.error('Invoice element not found');
+                        setIsExportingImage(false);
+                        return;
+                    }
 
-                if (printWindow) {
-                    printWindow.onload = () => {
-                        setTimeout(() => {
-                            printWindow.print();
-                            // Clean up blob URL after printing
-                            URL.revokeObjectURL(blobUrl);
-                        }, 300);
-                    };
-                } else {
-                    // If popup blocked, fallback to direct download as HTML
+                    const canvas = await html2canvas(element, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        logging: false
+                    });
+
+                    const uri = canvas.toDataURL('image/jpeg', 0.9);
                     const a = document.createElement('a');
-                    a.href = blobUrl;
-                    a.download = `hoadon_${order.id ? order.id.slice(0, 8) : 'export'}_${formattedDate.replace(/\//g, '-')}.html`;
+                    a.href = uri;
+                    a.download = `hoadon_${order.id ? order.id.slice(0, 8) : 'export'}.jpg`;
                     a.click();
-                    URL.revokeObjectURL(blobUrl);
+                } catch (webErr) {
+                    console.error('Web export error:', webErr);
+                    // Fallback to captureRef if html2canvas fails
+                    const uri = await captureRef(invoiceRef, { format: 'jpg', quality: 0.9 });
+                    const a = document.createElement('a');
+                    a.href = uri;
+                    a.download = `hoadon_${order.id ? order.id.slice(0, 8) : 'export'}.jpg`;
+                    a.click();
                 }
             } else {
-                const { uri } = await Print.printToFileAsync({
-                    html: htmlString
-                });
-
-                // Rename to short filename
-                const newUri = `${FileSystem.cacheDirectory}hoadon.pdf`;
-                await FileSystem.moveAsync({ from: uri, to: newUri });
-
+                const uri = await captureRef(invoiceRef, { format: 'jpg', quality: 0.9 });
                 if (await Sharing.isAvailableAsync()) {
-                    await Sharing.shareAsync(newUri, {
-                        mimeType: 'application/pdf',
-                        dialogTitle: 'Hoa don',
-                        UTI: 'com.adobe.pdf'
-                    });
+                    await Sharing.shareAsync(uri, { mimeType: 'image/jpeg', dialogTitle: 'Chia sẻ hóa đơn' });
                 } else {
-                    Alert.alert('Thành công', 'Đã tạo hóa đơn PDF.');
+                    Alert.alert('Thành công', 'Đã tạo hóa đơn ảnh.');
                 }
             }
         } catch (error) {
-            console.error('Error generating PDF:', error);
+            console.error('Error generating Image:', error);
             if (Platform.OS === 'web') {
-                window.alert('Có lỗi xảy ra khi tạo PDF. Vui lòng thử lại.');
+                window.alert('Có lỗi xảy ra khi tạo Ảnh. Vui lòng thử lại.');
             } else {
-                Alert.alert('Lỗi', 'Có lỗi xảy ra khi tạo PDF. Vui lòng thử lại.');
+                Alert.alert('Lỗi', 'Có lỗi xảy ra khi tạo Ảnh. Vui lòng thử lại.');
             }
         } finally {
-            setIsGeneratingPDF(false);
+            setIsExportingImage(false);
+        }
+    };
+
+    const handleStartEditing = () => {
+        if (!order) return;
+        setEditForm({
+            customerName: order.customerName || '',
+            counterName: order.counterName || '',
+            tienHang: order.tienHang || 0,
+            tienCongGom: order.tienCongGom || 0,
+            phiDongHang: order.phiDongHang || 0,
+            tienThem: order.tienThem || 0,
+            loaiTienThem: order.loaiTienThem || '',
+        });
+
+        let initialThue = '';
+        if (order.loaiTienThem && order.loaiTienThem.startsWith('Thuế')) {
+            const match = order.loaiTienThem.match(/Thuế ([\d.]+)%/);
+            if (match) {
+                initialThue = match[1];
+            }
+        }
+        setThueStr(initialThue);
+
+        setError(null);
+        setIsEditing(true);
+    };
+
+    const handleCancelEditing = () => {
+        setIsEditing(false);
+        setError(null);
+    };
+
+    const handleSaveEditing = async () => {
+        if (!order) return;
+
+        const tienHang = Number(editForm.tienHang) || 0;
+        const tienCongGom = Number(editForm.tienCongGom) || 0;
+        const phiDongHang = Number(editForm.phiDongHang) || 0;
+
+        let finalTienThem = Number(editForm.tienThem) || 0;
+        let finalLoaiTienThem = editForm.loaiTienThem?.trim() || '';
+
+        // Tự động tính lại thuế nếu có nhập % thuế
+        if (tienThue > 0 || thueStr !== '') {
+            if (Math.round(tienHang * thuePhanTram / 100) > 0) {
+                finalTienThem = Math.round(tienHang * thuePhanTram / 100);
+                finalLoaiTienThem = `Thuế ${thuePhanTram}%`;
+            } else if (finalLoaiTienThem.startsWith('Thuế')) {
+                finalTienThem = 0;
+                finalLoaiTienThem = '';
+            }
+        }
+
+        if (tienHang <= 0) {
+            setError('Tiền hàng phải lớn hơn 0');
+            return;
+        }
+
+        if (finalTienThem > 0 && !finalLoaiTienThem) {
+            if (Platform.OS === 'web') {
+                // Trên web mới hỏi confirm, mobile tiếp tục luôn
+                // eslint-disable-next-line no-alert
+                const shouldContinue = window.confirm('Bạn chưa nhập loại tiền thêm. Bạn có muốn tiếp tục không?');
+                if (!shouldContinue) {
+                    return;
+                }
+            }
+        }
+
+        setIsSaving(true);
+        setError(null);
+        try {
+            const payload = {
+                customerName: editForm.customerName || null,
+                counterName: editForm.counterName || null,
+                tienHang,
+                tienCongGom,
+                phiDongHang,
+            };
+
+            if (finalTienThem > 0) {
+                payload.tienThem = finalTienThem;
+                payload.loaiTienThem = finalLoaiTienThem || null;
+            } else {
+                payload.tienThem = 0;
+                payload.loaiTienThem = null;
+            }
+
+            const response = await updateOrderAPI(order.id, payload);
+
+            if (!response?.success || !response?.data) {
+                throw new Error(response?.error || 'Lỗi sửa hóa đơn. Vui lòng thử lại.');
+            }
+
+            setOrder(response.data);
+            setIsEditing(false);
+        } catch (e) {
+            console.error('Update order error:', e);
+            setError(e.message || 'Lỗi sửa hóa đơn. Vui lòng thử lại.');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -389,7 +295,7 @@ const OrderDetailScreen = () => {
                 </View>
             ) : order && (
                 <>
-                    <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                    <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                         {/* General Info */}
                         <View style={styles.cardSection}>
                             <Text style={styles.customerName}>Khách hàng: {order.customerName || 'N/A'}</Text>
@@ -409,8 +315,15 @@ const OrderDetailScreen = () => {
                                 <Text style={styles.moneyValue}>{(order.tienHang || 0).toLocaleString('vi-VN')}đ</Text>
                             </View>
 
+                            {(order.tienHoaHong > 0) && (
+                                <View style={styles.moneyRow}>
+                                    <Text style={styles.moneyLabel}>Hoa hồng</Text>
+                                    <Text style={styles.moneyValue}>{(order.tienHoaHong || 0).toLocaleString('vi-VN')}đ</Text>
+                                </View>
+                            )}
+
                             <View style={styles.moneyRow}>
-                                <Text style={styles.moneyLabel}>Tiền công gom</Text>
+                                <Text style={styles.moneyLabel}>Phí gom</Text>
                                 <Text style={styles.moneyValue}>{(order.tienCongGom || 0).toLocaleString('vi-VN')}đ</Text>
                             </View>
 
@@ -419,12 +332,6 @@ const OrderDetailScreen = () => {
                                 <Text style={styles.moneyValue}>{(order.phiDongHang || 0).toLocaleString('vi-VN')}đ</Text>
                             </View>
 
-                            {order.tienHoaHong > 0 && (
-                                <View style={[styles.moneyRow, styles.borderTop]}>
-                                    <Text style={styles.moneyLabel}>Tiền hoa hồng</Text>
-                                    <Text style={styles.moneyValue}>{(order.tienHoaHong || 0).toLocaleString('vi-VN')}đ</Text>
-                                </View>
-                            )}
 
                             {(order.tienThem !== undefined && order.tienThem !== null && order.tienThem > 0) && (
                                 <View style={[styles.moneyRow, styles.borderTop]}>
@@ -434,32 +341,333 @@ const OrderDetailScreen = () => {
                             )}
 
                             <View style={[styles.moneyRow, styles.borderTop, styles.totalRow]}>
-                                <Text style={styles.totalLabel}>Tổng tiền hóa đơn (khách phải trả)</Text>
+                                <Text style={styles.totalLabel}>Tổng tiền hóa đơn</Text>
                                 <Text style={styles.totalValue}>{(order.tongTienHoaDon || 0).toLocaleString('vi-VN')}đ</Text>
                             </View>
+
+                            {isEditing && (
+                                <View style={styles.editSection}>
+                                    <Text style={styles.editTitle}>Sửa hóa đơn</Text>
+
+                                    <View style={styles.editFieldGroup}>
+                                        <Text style={styles.editLabel}>Tên khách hàng</Text>
+                                        <TextInput
+                                            value={editForm.customerName}
+                                            onChangeText={(text) =>
+                                                setEditForm((prev) => ({ ...prev, customerName: text }))
+                                            }
+                                            style={styles.input}
+                                            placeholder="Nhập tên khách hàng"
+                                        />
+                                    </View>
+
+                                    <View style={styles.editFieldGroup}>
+                                        <Text style={styles.editLabel}>Tên quầy</Text>
+                                        <TextInput
+                                            value={editForm.counterName}
+                                            onChangeText={(text) =>
+                                                setEditForm((prev) => ({ ...prev, counterName: text }))
+                                            }
+                                            style={styles.input}
+                                            placeholder="Nhập tên quầy"
+                                        />
+                                    </View>
+
+                                    <View style={styles.editFieldGroup}>
+                                        <Text style={styles.editLabel}>Tiền hàng (VNĐ) *</Text>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            value={String(editForm.tienHang)}
+                                            onChangeText={(text) =>
+                                                setEditForm((prev) => ({ ...prev, tienHang: text.replace(/[^0-9]/g, '') }))
+                                            }
+                                            style={styles.input}
+                                        />
+                                    </View>
+
+                                    <View style={styles.editFieldGroup}>
+                                        <Text style={styles.editLabel}>Phí gom (VNĐ)</Text>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            value={String(editForm.tienCongGom)}
+                                            onChangeText={(text) =>
+                                                setEditForm((prev) => ({ ...prev, tienCongGom: text.replace(/[^0-9]/g, '') }))
+                                            }
+                                            style={styles.input}
+                                        />
+                                    </View>
+
+                                    <View style={styles.editFieldGroup}>
+                                        <Text style={styles.editLabel}>Phí đóng hàng (VNĐ)</Text>
+                                        <TextInput
+                                            keyboardType="numeric"
+                                            value={String(editForm.phiDongHang)}
+                                            onChangeText={(text) =>
+                                                setEditForm((prev) => ({ ...prev, phiDongHang: text.replace(/[^0-9]/g, '') }))
+                                            }
+                                            style={styles.input}
+                                        />
+                                    </View>
+
+                                    {/* Thuế */}
+                                    <View style={styles.taxSection}>
+                                        <Text style={styles.taxLabel}>Thuế (%)</Text>
+                                        <View style={styles.taxRow}>
+                                            <View style={styles.taxInputWrap}>
+                                                <TextInput
+                                                    style={styles.taxInput}
+                                                    placeholder="0"
+                                                    placeholderTextColor="#9ca3af"
+                                                    keyboardType="decimal-pad"
+                                                    value={thueStr}
+                                                    onChangeText={setThueStr}
+                                                />
+                                                <Text style={styles.taxPercent}>%</Text>
+                                            </View>
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.taxChip,
+                                                    thueStr === '1.5' ? styles.taxChipActive : {}
+                                                ]}
+                                                onPress={() => setThueStr(thueStr === '1.5' ? '' : '1.5')}
+                                            >
+                                                <Text style={[
+                                                    styles.taxChipText,
+                                                    thueStr === '1.5' ? styles.taxChipTextActive : {}
+                                                ]}>1.5%</Text>
+                                            </TouchableOpacity>
+                                            {tienThue > 0 && (
+                                                <Text style={styles.taxAmount}>
+                                                    = {tienThue.toLocaleString('vi-VN')}đ
+                                                </Text>
+                                            )}
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.editButtonsRow}>
+                                        <TouchableOpacity
+                                            style={[styles.secondaryButton, isSaving && styles.disabledButton]}
+                                            onPress={handleCancelEditing}
+                                            disabled={isSaving}
+                                        >
+                                            <Text style={styles.secondaryButtonText}>Hủy</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.primaryButton, isSaving && styles.disabledButton]}
+                                            onPress={handleSaveEditing}
+                                            disabled={isSaving}
+                                        >
+                                            {isSaving ? (
+                                                <ActivityIndicator color="#fff" />
+                                            ) : (
+                                                <Text style={styles.primaryButtonText}>Lưu thay đổi</Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            )}
                         </View>
                     </ScrollView>
 
                     {/* Bottom Actions */}
                     <View style={styles.bottomActions}>
                         <Button
-                            title="Xuất bill PDF"
-                            onPress={handleExportPDF}
-                            loading={isGeneratingPDF}
-                            disabled={isGeneratingPDF}
-                            icon={<Ionicons name="document-text-outline" size={20} color="white" />}
+                            title={isEditing ? 'Đang sửa hóa đơn' : 'Sửa hóa đơn'}
+                            onPress={handleStartEditing}
+                            loading={isSaving}
+                            disabled={isExportingImage || isSaving || !order}
+                            variant="outline"
                             style={styles.actionButton}
                         />
                         <Button
-                            title="Chia sẻ"
-                            onPress={() => Alert.alert('Thông báo', 'Tính năng đang phát triển')}
-                            variant="outline"
-                            icon={<Ionicons name="share-social-outline" size={20} color={colors.primary} />}
+                            title="Xem trước hóa đơn"
+                            onPress={() => setShowPreview(true)}
+                            icon={<Ionicons name="eye-outline" size={20} color="white" />}
                             style={styles.actionButton}
                         />
                     </View>
                 </>
             )}
+
+            {/* Hidden Receipt for Image Export */}
+            {order && (
+                <View style={{ position: 'absolute', top: -10000, left: -10000 }} collapsable={false}>
+                    <ViewShot ref={invoiceRef} options={{ format: 'jpg', quality: 0.9 }}>
+                        <View
+                            nativeID="order-invoice-capture"
+                            style={{ width: 450, backgroundColor: '#fff', padding: 20 }}
+                            collapsable={false}
+                        >
+                            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                                <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000' }}>Gom Hàng Ninh Hiệp</Text>
+                                <Text style={{ fontSize: 14, color: '#000', marginTop: 4 }}>Ninh Hiệp, Gia Lâm, Hà Nội - 0922238683</Text>
+                                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#2563eb', marginTop: 15 }}>HÓA ĐƠN BÁN HÀNG</Text>
+                            </View>
+
+                            <View style={{ alignItems: 'flex-end', marginBottom: 15 }}>
+                                <Text style={{ fontSize: 14, color: '#444' }}>Ngày: {formatDateTime(order.createdAt || order.ngayLamGom)}</Text>
+                            </View>
+
+                            <View style={{ marginBottom: 20 }}>
+                                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2563eb', marginBottom: 8 }}>Thông tin khách hàng</Text>
+                                <Text style={{ fontSize: 15, color: '#000', marginBottom: 4 }}><Text style={{ fontWeight: 'bold' }}>Tên:</Text> {order.customerName || 'N/A'}</Text>
+                                {order.customerPhone ? <Text style={{ fontSize: 15, color: '#000', marginBottom: 4 }}><Text style={{ fontWeight: 'bold' }}>SĐT:</Text> {order.customerPhone}</Text> : null}
+                                {order.counterName ? <Text style={{ fontSize: 15, color: '#000', marginBottom: 4 }}><Text style={{ fontWeight: 'bold' }}>Quầy/Vị trí:</Text> {order.counterName}</Text> : null}
+                            </View>
+
+                            <View style={{ borderWidth: 1, borderColor: '#e0e0e0', marginBottom: 20 }}>
+                                <View style={{ flexDirection: 'row', backgroundColor: '#f0f4ff', borderBottomWidth: 1, borderColor: '#2563eb', padding: 8 }}>
+                                    <Text style={{ flex: 1, fontWeight: 'bold', color: '#1a1a1a' }}>STT</Text>
+                                    <Text style={{ flex: 4, fontWeight: 'bold', color: '#1a1a1a' }}>Mô tả</Text>
+                                    <Text style={{ flex: 3, fontWeight: 'bold', color: '#1a1a1a', textAlign: 'right' }}>Thành tiền</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', padding: 8 }}>
+                                    <Text style={{ flex: 1, color: '#000' }}>1</Text>
+                                    <Text style={{ flex: 4, color: '#000' }}>Dịch vụ gom hàng</Text>
+                                    <Text style={{ flex: 3, color: '#000', textAlign: 'right' }}>{(order.tongTienHoaDon || 0).toLocaleString('vi-VN')}đ</Text>
+                                </View>
+                            </View>
+
+                            <View style={{ marginBottom: 20 }}>
+                                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2563eb', marginBottom: 8 }}>Chi tiết thanh toán</Text>
+
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>Tiền hàng:</Text>
+                                    <Text style={{ fontSize: 15, color: '#000' }}>{((order.tienHang || 0) + (order.tienHoaHong || 0)).toLocaleString('vi-VN')}đ</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>Phí gom:</Text>
+                                    <Text style={{ fontSize: 15, color: '#000' }}>{(order.tienCongGom || 0).toLocaleString('vi-VN')}đ</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>Phí đóng hàng:</Text>
+                                    <Text style={{ fontSize: 15, color: '#000' }}>{(order.phiDongHang || 0).toLocaleString('vi-VN')}đ</Text>
+                                </View>
+                                {(order.tienThem !== undefined && order.tienThem !== null && order.tienThem > 0) ? (
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                                        <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>{order.loaiTienThem || 'Tiền thêm'}:</Text>
+                                        <Text style={{ fontSize: 15, color: '#000' }}>{(order.tienThem || 0).toLocaleString('vi-VN')}đ</Text>
+                                    </View>
+                                ) : null}
+
+                                <View style={{ borderBottomWidth: 2, borderColor: '#1a1a1a', marginVertical: 10 }} />
+
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 8 }}>
+                                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2563eb' }}>TỔNG TIỀN:</Text>
+                                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2563eb' }}>{(order.tongTienHoaDon || 0).toLocaleString('vi-VN')}đ</Text>
+                                </View>
+                            </View>
+
+                            <View style={{ alignItems: 'center', marginTop: 20, borderTopWidth: 1, borderColor: '#e0e0e0', paddingTop: 15 }}>
+                                <Text style={{ fontSize: 14, color: '#333', marginBottom: 4 }}>Cảm ơn quý khách đã sử dụng dịch vụ!</Text>
+                                <Text style={{ fontSize: 14, color: '#333' }}>Hotline hỗ trợ: 0922238683</Text>
+                            </View>
+                        </View>
+                    </ViewShot>
+                </View>
+            )}
+            {/* Preview Modal */}
+            <Modal
+                visible={showPreview}
+                animationType="slide"
+                onRequestClose={() => setShowPreview(false)}
+            >
+                <View style={{ flex: 1, backgroundColor: '#F2F2F7' }}>
+                    {/* Modal Header */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 15, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E5E5EA' }}>
+                        <TouchableOpacity onPress={() => setShowPreview(false)} style={{ width: 40, height: 40, justifyContent: 'center' }}>
+                            <Ionicons name="close" size={28} color="#000" />
+                        </TouchableOpacity>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#000' }}>Xem trước hóa đơn</Text>
+                        <TouchableOpacity
+                            onPress={async () => {
+                                setShowPreview(false);
+                                await new Promise(r => setTimeout(r, 300));
+                                handleExportImage();
+                            }}
+                            disabled={isExportingImage}
+                            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
+                        >
+                            {isExportingImage ? (
+                                <ActivityIndicator size="small" color="#FFF" />
+                            ) : (
+                                <Ionicons name="share-outline" size={18} color="#FFF" />
+                            )}
+                            <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 14, marginLeft: 4 }}>Chia sẻ</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Preview Content */}
+                    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+                        <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 20, ...shadows.md }}>
+                            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                                <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000' }}>Gom Hàng Ninh Hiệp</Text>
+                                <Text style={{ fontSize: 14, color: '#000', marginTop: 4 }}>Ninh Hiệp, Gia Lâm, Hà Nội - 0922238683</Text>
+                                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#2563eb', marginTop: 15 }}>HÓA ĐƠN BÁN HÀNG</Text>
+                            </View>
+
+                            <View style={{ alignItems: 'flex-end', marginBottom: 15 }}>
+                                <Text style={{ fontSize: 14, color: '#444' }}>Ngày: {formatDateTime(order?.createdAt || order?.ngayLamGom)}</Text>
+                            </View>
+
+                            <View style={{ marginBottom: 20 }}>
+                                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2563eb', marginBottom: 8 }}>Thông tin khách hàng</Text>
+                                <Text style={{ fontSize: 15, color: '#000', marginBottom: 4 }}><Text style={{ fontWeight: 'bold' }}>Tên:</Text> {order?.customerName || 'N/A'}</Text>
+                                {order?.customerPhone ? <Text style={{ fontSize: 15, color: '#000', marginBottom: 4 }}><Text style={{ fontWeight: 'bold' }}>SĐT:</Text> {order?.customerPhone}</Text> : null}
+                                {order?.counterName ? <Text style={{ fontSize: 15, color: '#000', marginBottom: 4 }}><Text style={{ fontWeight: 'bold' }}>Quầy/Vị trí:</Text> {order?.counterName}</Text> : null}
+                            </View>
+
+                            <View style={{ borderWidth: 1, borderColor: '#e0e0e0', marginBottom: 20 }}>
+                                <View style={{ flexDirection: 'row', backgroundColor: '#f0f4ff', borderBottomWidth: 1, borderColor: '#2563eb', padding: 8 }}>
+                                    <Text style={{ flex: 1, fontWeight: 'bold', color: '#1a1a1a' }}>STT</Text>
+                                    <Text style={{ flex: 4, fontWeight: 'bold', color: '#1a1a1a' }}>Mô tả</Text>
+                                    <Text style={{ flex: 3, fontWeight: 'bold', color: '#1a1a1a', textAlign: 'right' }}>Thành tiền</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', padding: 8 }}>
+                                    <Text style={{ flex: 1, color: '#000' }}>1</Text>
+                                    <Text style={{ flex: 4, color: '#000' }}>Dịch vụ gom hàng</Text>
+                                    <Text style={{ flex: 3, color: '#000', textAlign: 'right' }}>{(order?.tongTienHoaDon || 0).toLocaleString('vi-VN')}đ</Text>
+                                </View>
+                            </View>
+
+                            <View style={{ marginBottom: 20 }}>
+                                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#2563eb', marginBottom: 8 }}>Chi tiết thanh toán</Text>
+
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>Tiền hàng:</Text>
+                                    <Text style={{ fontSize: 15, color: '#000' }}>{((order?.tienHang || 0) + (order?.tienHoaHong || 0)).toLocaleString('vi-VN')}đ</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>Phí gom:</Text>
+                                    <Text style={{ fontSize: 15, color: '#000' }}>{(order?.tienCongGom || 0).toLocaleString('vi-VN')}đ</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>Phí đóng hàng:</Text>
+                                    <Text style={{ fontSize: 15, color: '#000' }}>{(order?.phiDongHang || 0).toLocaleString('vi-VN')}đ</Text>
+                                </View>
+                                {(order?.tienThem !== undefined && order?.tienThem !== null && order?.tienThem > 0) ? (
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                                        <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }}>{order?.loaiTienThem || 'Tiền thêm'}:</Text>
+                                        <Text style={{ fontSize: 15, color: '#000' }}>{(order?.tienThem || 0).toLocaleString('vi-VN')}đ</Text>
+                                    </View>
+                                ) : null}
+
+                                <View style={{ borderBottomWidth: 2, borderColor: '#1a1a1a', marginVertical: 10 }} />
+
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 8 }}>
+                                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2563eb' }}>TỔNG TIỀN:</Text>
+                                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2563eb' }}>{(order?.tongTienHoaDon || 0).toLocaleString('vi-VN')}đ</Text>
+                                </View>
+                            </View>
+
+                            <View style={{ alignItems: 'center', marginTop: 20, borderTopWidth: 1, borderColor: '#e0e0e0', paddingTop: 15 }}>
+                                <Text style={{ fontSize: 14, color: '#333', marginBottom: 4 }}>Cảm ơn quý khách đã sử dụng dịch vụ!</Text>
+                                <Text style={{ fontSize: 14, color: '#333' }}>Hotline hỗ trợ: 0922238683</Text>
+                            </View>
+                        </View>
+                    </ScrollView>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -587,6 +795,136 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         // marginBottom: spacing.sm,
+    },
+    editSection: {
+        marginTop: spacing.lg,
+        borderTopWidth: 1,
+        borderTopColor: colors.gray200,
+        paddingTop: spacing.lg,
+        gap: spacing.sm,
+    },
+    editTitle: {
+        fontSize: typography.sizes.md,
+        fontWeight: typography.weights.semibold,
+        color: colors.gray900,
+        marginBottom: spacing.sm,
+    },
+    editFieldGroup: {
+        marginBottom: spacing.sm,
+    },
+    editLabel: {
+        fontSize: typography.sizes.sm,
+        color: colors.gray600,
+        marginBottom: spacing.xs,
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: colors.gray200,
+        borderRadius: borderRadius.md,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        fontSize: typography.sizes.md,
+        color: colors.gray900,
+        backgroundColor: '#fff',
+    },
+    editButtonsRow: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginTop: spacing.md,
+        gap: spacing.sm,
+    },
+    secondaryButton: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: borderRadius.md,
+        borderWidth: 1,
+        borderColor: colors.gray300,
+        backgroundColor: '#fff',
+    },
+    secondaryButtonText: {
+        color: colors.gray700,
+        fontSize: typography.sizes.sm,
+        fontWeight: typography.weights.semibold,
+    },
+    primaryButton: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: borderRadius.md,
+        backgroundColor: colors.primary,
+    },
+    primaryButtonText: {
+        color: '#fff',
+        fontSize: typography.sizes.sm,
+        fontWeight: typography.weights.semibold,
+    },
+    disabledButton: {
+        opacity: 0.6,
+    },
+
+    // Tax styles
+    taxSection: {
+        marginTop: 8,
+    },
+    taxLabel: {
+        fontSize: 14,
+        color: theme.colors.text.secondary,
+        marginBottom: 8,
+        fontWeight: '500',
+    },
+    taxRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    taxInputWrap: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        height: 44,
+    },
+    taxInput: {
+        width: 50,
+        height: 44,
+        fontSize: 16,
+        color: theme.colors.text.primary,
+        textAlign: 'right',
+        paddingVertical: 0,
+    },
+    taxPercent: {
+        fontSize: 16,
+        color: '#9ca3af',
+        fontWeight: '500',
+        marginLeft: 4,
+    },
+    taxChip: {
+        marginLeft: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 20,
+        backgroundColor: '#f3f4f6',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+    taxChipActive: {
+        backgroundColor: theme.colors.primary.light || '#EBF5FF',
+        borderColor: theme.colors.primary.default,
+    },
+    taxChipText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#6b7280',
+    },
+    taxChipTextActive: {
+        color: theme.colors.primary.default,
+    },
+    taxAmount: {
+        marginLeft: 12,
+        fontSize: 14,
+        color: theme.colors.primary.default,
+        fontWeight: '600',
     },
 });
 
