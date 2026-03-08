@@ -128,7 +128,10 @@ export default function CustomerDetailScreen({ route, navigation }) {
 
     const stats = {
         count: orders.length,
-        totalAmount: orders.reduce((sum, order) => sum + order.tongTienHoaDon, 0),
+        totalAmount: orders.reduce((sum, order) => sum + (order.tongTienHoaDon || 0), 0),
+        totalTienUng: orders.reduce((sum, order) => sum + (order.tienHang || 0) + (order.tienHoaHong || 0), 0),
+        totalPhiGom: orders.reduce((sum, order) => sum + (order.tienCongGom || 0), 0),
+        totalThuePhi: orders.reduce((sum, order) => sum + (order.phiDongHang || 0) + (order.tienThem || 0), 0),
     };
 
     // Auto-calculate tongThanhToan whenever inputs or totalAmount change
@@ -169,7 +172,11 @@ export default function CustomerDetailScreen({ route, navigation }) {
                                 scale: 2,
                                 useCORS: true,
                                 backgroundColor: '#ffffff',
-                                logging: false
+                                logging: false,
+                                windowWidth: element.scrollWidth,
+                                windowHeight: element.scrollHeight + 40,
+                                width: element.scrollWidth,
+                                height: element.scrollHeight + 40
                             });
 
                             const uri = canvas.toDataURL('image/jpeg', 0.9);
@@ -472,7 +479,7 @@ export default function CustomerDetailScreen({ route, navigation }) {
                     <ViewShot ref={invoiceRef} options={{ format: 'jpg', quality: 0.9 }}>
                         <View
                             nativeID="invoice-to-capture"
-                            style={{ width: 600, backgroundColor: '#fff', padding: 24 }}
+                            style={{ width: 600, backgroundColor: '#fff', padding: 24, paddingBottom: 48 }}
                             collapsable={false}
                         >
                             {/* Header */}
@@ -521,7 +528,7 @@ export default function CustomerDetailScreen({ route, navigation }) {
                                 const totalPhi = (order.phiDongHang || 0) + (order.tienThem || 0);
 
                                 return (
-                                    <View key={index} style={{ flexDirection: 'row', paddingVertical: 14, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: '#e5e7eb', alignItems: 'center' }}>
+                                    <View key={index} style={{ flexDirection: 'row', paddingVertical: 14, paddingHorizontal: 8, borderBottomWidth: index === orders.length - 1 ? 0 : 1, borderBottomColor: '#e5e7eb', alignItems: 'center' }}>
                                         <Text style={{ flex: 0.8, fontSize: 15, color: '#374151', textAlign: 'center' }}>{index + 1}</Text>
                                         <Text style={{ flex: 2.2, fontSize: 15, color: '#374151', textAlign: 'left', paddingLeft: 4 }}>{order.counterName || 'N/A'}</Text>
                                         <Text style={{ flex: 1.75, fontSize: 15, color: '#374151', textAlign: 'right' }}>{formatCurrency((order.tienHang || 0) + (order.tienHoaHong || 0))}</Text>
@@ -531,6 +538,14 @@ export default function CustomerDetailScreen({ route, navigation }) {
                                     </View>
                                 );
                             })}
+
+                            <View style={{ flexDirection: 'row', paddingVertical: 14, paddingHorizontal: 8, borderBottomWidth: 0, alignItems: 'center', backgroundColor: '#fafafa' }}>
+                                <Text style={{ flex: 3, fontWeight: 'bold', fontSize: 16, color: '#111827', textAlign: 'center' }}>TỔNG {orders.length} ĐƠN</Text>
+                                <Text style={{ flex: 1.75, fontWeight: 'bold', fontSize: 15, color: '#111827', textAlign: 'right' }}>{formatCurrency(stats.totalTienUng)}</Text>
+                                <Text style={{ flex: 1.75, fontWeight: 'bold', fontSize: 15, color: '#111827', textAlign: 'right' }}>{formatCurrency(stats.totalPhiGom)}</Text>
+                                <Text style={{ flex: 1.75, fontWeight: 'bold', fontSize: 15, color: '#111827', textAlign: 'center' }}>{formatCurrency(stats.totalThuePhi)}</Text>
+                                <Text style={{ flex: 1.75, fontWeight: 'bold', fontSize: 16, color: '#2563eb', textAlign: 'right' }}>{formatCurrency(stats.totalAmount)}</Text>
+                            </View>
 
                             {/* Summary Totals Table */}
                             <View style={{ marginTop: 8, borderTopWidth: 2, borderTopColor: '#2563eb' }}>
@@ -560,8 +575,9 @@ export default function CustomerDetailScreen({ route, navigation }) {
                             </View>
                         </View>
                     </ViewShot>
-                </View>
-            )}
+                </View >
+            )
+            }
 
             {/* Preview Modal */}
             <Modal
@@ -643,7 +659,7 @@ export default function CustomerDetailScreen({ route, navigation }) {
                                 const totalPhi = (order.phiDongHang || 0) + (order.tienThem || 0);
 
                                 return (
-                                    <View key={index} style={{ flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: '#e5e7eb', alignItems: 'center' }}>
+                                    <View key={index} style={{ flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: index === orders.length - 1 ? 0 : 1, borderBottomColor: '#e5e7eb', alignItems: 'center' }}>
                                         <Text style={{ flex: 0.8, fontSize: 13, color: '#374151', textAlign: 'center' }}>{index + 1}</Text>
                                         <Text style={{ flex: 2.2, fontSize: 13, color: '#374151', textAlign: 'left', paddingLeft: 4 }}>{order.counterName || 'N/A'}</Text>
                                         <Text style={{ flex: 1.75, fontSize: 13, color: '#374151', textAlign: 'right' }}>{formatCurrency((order.tienHang || 0) + (order.tienHoaHong || 0))}</Text>
@@ -653,6 +669,14 @@ export default function CustomerDetailScreen({ route, navigation }) {
                                     </View>
                                 );
                             })}
+
+                            <View style={{ flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 0, alignItems: 'center', backgroundColor: '#fafafa' }}>
+                                <Text style={{ flex: 3, fontWeight: 'bold', fontSize: 14, color: '#111827', textAlign: 'center' }}>TỔNG {orders.length} ĐƠN</Text>
+                                <Text style={{ flex: 1.75, fontWeight: 'bold', fontSize: 13, color: '#111827', textAlign: 'right' }}>{formatCurrency(stats.totalTienUng)}</Text>
+                                <Text style={{ flex: 1.75, fontWeight: 'bold', fontSize: 13, color: '#111827', textAlign: 'right' }}>{formatCurrency(stats.totalPhiGom)}</Text>
+                                <Text style={{ flex: 1.75, fontWeight: 'bold', fontSize: 13, color: '#111827', textAlign: 'center' }}>{formatCurrency(stats.totalThuePhi)}</Text>
+                                <Text style={{ flex: 1.75, fontWeight: 'bold', fontSize: 14, color: '#2563eb', textAlign: 'right' }}>{formatCurrency(stats.totalAmount)}</Text>
+                            </View>
 
                             {/* Summary Totals Table */}
                             <View style={{ marginTop: 8, borderTopWidth: 2, borderTopColor: '#2563eb' }}>
@@ -682,9 +706,9 @@ export default function CustomerDetailScreen({ route, navigation }) {
                             </View>
                         </View>
                     </ScrollView>
-                </View>
-            </Modal>
-        </View>
+                </View >
+            </Modal >
+        </View >
     );
 }
 

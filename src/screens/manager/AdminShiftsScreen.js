@@ -205,8 +205,11 @@ export default function AdminShiftsScreen({ navigation }) {
             return;
         }
 
+        const shiftId = activeShiftIdForHistory; // Can be detailShift or selectedShiftForMoney
+        if (!shiftId) return;
+
         updateAdditionMutation.mutate(
-            { shiftId: detailShift.id, additionId, data: { amount, note: editNote || null } },
+            { shiftId, additionId, data: { amount, note: editNote || null } },
             {
                 onSuccess: () => {
                     Alert.alert('Thành công', 'Đã cập nhật lịch sử thêm tiền');
@@ -217,6 +220,9 @@ export default function AdminShiftsScreen({ navigation }) {
     };
 
     const handleDeleteAddition = (additionId) => {
+        const shiftId = activeShiftIdForHistory;
+        if (!shiftId) return;
+
         Alert.alert(
             'Xác nhận xóa',
             'Bạn có chắc chắn muốn xóa lần thêm tiền này?',
@@ -224,7 +230,7 @@ export default function AdminShiftsScreen({ navigation }) {
                 { text: 'Hủy', style: 'cancel' },
                 {
                     text: 'Xóa', style: 'destructive', onPress: () => {
-                        deleteAdditionMutation.mutate({ shiftId: detailShift.id, additionId });
+                        deleteAdditionMutation.mutate({ shiftId, additionId });
                     }
                 }
             ]
@@ -561,8 +567,15 @@ export default function AdminShiftsScreen({ navigation }) {
                                                                             >
                                                                                 <Ionicons name="pencil" size={18} color={theme?.colors?.primary?.default || '#007AFF'} />
                                                                             </TouchableOpacity>
-                                                                            <TouchableOpacity onPress={() => handleDeleteAddition(addition.id)}>
-                                                                                <Ionicons name="trash" size={18} color="#F44336" />
+                                                                            <TouchableOpacity
+                                                                                onPress={() => handleDeleteAddition(addition.id)}
+                                                                                disabled={deleteAdditionMutation.isPending}
+                                                                            >
+                                                                                {deleteAdditionMutation.isPending && deleteAdditionMutation.variables?.additionId === addition.id ? (
+                                                                                    <ActivityIndicator size="small" color="#F44336" />
+                                                                                ) : (
+                                                                                    <Ionicons name="trash" size={18} color="#F44336" />
+                                                                                )}
                                                                             </TouchableOpacity>
                                                                         </View>
                                                                     </View>
@@ -670,31 +683,88 @@ export default function AdminShiftsScreen({ navigation }) {
                                         ) : moneyAdditions.length === 0 ? (
                                             <Text style={{ color: '#999', fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 }}>Chưa có lịch sử thêm tiền</Text>
                                         ) : (
-                                            moneyAdditions.map((addition) => (
-                                                <View key={addition.id} style={{
-                                                    backgroundColor: '#F8F9FA',
-                                                    borderRadius: 8,
-                                                    padding: 12,
-                                                    marginBottom: 8,
-                                                    borderWidth: 1,
-                                                    borderColor: '#E5E5EA'
-                                                }}>
-                                                    <View>
-                                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#333' }}>+{formatCurrency(addition.amount)}</Text>
-                                                            {/* Edit triggers are removed in this context to keep it simpler, they can do it in Detail view.
-                                                    Alternatively we can duplicate the edit block here. Since logic uses detailShift, 
-                                                    we let them do full edit in DetailShift modal instead. */}
-                                                        </View>
-                                                        {addition.note && (
-                                                            <Text style={{ fontSize: 13, color: '#666', marginTop: 4 }}>{addition.note}</Text>
+                                            <View style={{ gap: 8 }}>
+                                                {moneyAdditions.map((addition) => (
+                                                    <View key={addition.id} style={{
+                                                        backgroundColor: '#F8F9FA',
+                                                        borderRadius: 8,
+                                                        padding: 12,
+                                                        borderWidth: 1,
+                                                        borderColor: '#E5E5EA'
+                                                    }}>
+                                                        {editingAddition === addition.id ? (
+                                                            <View>
+                                                                <TextInput
+                                                                    style={[styles.input, { marginBottom: 8 }]}
+                                                                    value={editAmount}
+                                                                    onChangeText={(t) => setEditAmount(formatMoneyInput(t))}
+                                                                    placeholder="Số tiền"
+                                                                    keyboardType="numeric"
+                                                                />
+                                                                <TextInput
+                                                                    style={[styles.input, { marginBottom: 8, height: 60 }]}
+                                                                    value={editNote}
+                                                                    onChangeText={setEditNote}
+                                                                    placeholder="Ghi chú"
+                                                                    multiline
+                                                                />
+                                                                <View style={{ flexDirection: 'row', gap: 8 }}>
+                                                                    <TouchableOpacity
+                                                                        style={{ flex: 1, backgroundColor: theme?.colors?.primary?.default || '#007AFF', padding: 8, borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}
+                                                                        onPress={() => handleEditAddition(addition.id)}
+                                                                        disabled={updateAdditionMutation.isPending}
+                                                                    >
+                                                                        {updateAdditionMutation.isPending && updateAdditionMutation.variables?.additionId === addition.id ? (
+                                                                            <ActivityIndicator size="small" color="#FFF" />
+                                                                        ) : (
+                                                                            <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Lưu</Text>
+                                                                        )}
+                                                                    </TouchableOpacity>
+                                                                    <TouchableOpacity
+                                                                        style={{ flex: 1, backgroundColor: '#E5E5EA', padding: 8, borderRadius: 6, alignItems: 'center' }}
+                                                                        onPress={() => setEditingAddition(null)}
+                                                                    >
+                                                                        <Text style={{ color: '#333', fontWeight: 'bold' }}>Hủy</Text>
+                                                                    </TouchableOpacity>
+                                                                </View>
+                                                            </View>
+                                                        ) : (
+                                                            <View>
+                                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                    <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#333' }}>+{formatCurrency(addition.amount)}</Text>
+                                                                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                                                                        <TouchableOpacity
+                                                                            onPress={() => {
+                                                                                setEditingAddition(addition.id);
+                                                                                setEditAmount(formatMoneyInput(String(addition.amount)));
+                                                                                setEditNote(addition.note || '');
+                                                                            }}
+                                                                        >
+                                                                            <Ionicons name="pencil" size={18} color={theme?.colors?.primary?.default || '#007AFF'} />
+                                                                        </TouchableOpacity>
+                                                                        <TouchableOpacity
+                                                                            onPress={() => handleDeleteAddition(addition.id)}
+                                                                            disabled={deleteAdditionMutation.isPending}
+                                                                        >
+                                                                            {deleteAdditionMutation.isPending && deleteAdditionMutation.variables?.additionId === addition.id ? (
+                                                                                <ActivityIndicator size="small" color="#F44336" />
+                                                                            ) : (
+                                                                                <Ionicons name="trash" size={18} color="#F44336" />
+                                                                            )}
+                                                                        </TouchableOpacity>
+                                                                    </View>
+                                                                </View>
+                                                                {addition.note && (
+                                                                    <Text style={{ fontSize: 13, color: '#666', marginTop: 4 }}>{addition.note}</Text>
+                                                                )}
+                                                                <Text style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+                                                                    {new Date(addition.createdAt).toLocaleString('vi-VN')}
+                                                                </Text>
+                                                            </View>
                                                         )}
-                                                        <Text style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
-                                                            {new Date(addition.createdAt).toLocaleString('vi-VN')}
-                                                        </Text>
                                                     </View>
-                                                </View>
-                                            ))
+                                                ))}
+                                            </View>
                                         )}
                                     </ScrollView>
                                 </View>

@@ -32,6 +32,13 @@ export const getOrdersByDateAPI = async (date) => {
 };
 
 /**
+ * Lấy đơn hàng theo khoảng ngày (cho tháng/năm)
+ */
+export const getOrdersByDateRangeAPI = async (startDate, endDate) => {
+    return getOrdersListAPI({ startDate, endDate });
+};
+
+/**
  * Tạo đơn hàng mới (tự động tạo customer/counter nếu cần)
  */
 export const createOrderAPI = async (orderData) => {

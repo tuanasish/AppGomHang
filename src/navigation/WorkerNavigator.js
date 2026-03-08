@@ -14,6 +14,11 @@ import ProfileScreen from '../screens/common/ProfileScreen';
 import CreateOrderScreen from '../screens/worker/CreateOrderScreen';
 import EndShiftScreen from '../screens/worker/EndShiftScreen';
 
+// Admin/Manager screens reused for Worker
+import AdminCustomersScreen from '../screens/manager/AdminCustomersScreen';
+import AdminCountersScreen from '../screens/manager/AdminCountersScreen';
+import CustomerDetailScreen from '../screens/manager/CustomerDetailScreen';
+
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
@@ -28,6 +33,10 @@ function WorkerTabNavigator() {
                         iconName = focused ? 'home' : 'home-outline';
                     } else if (route.name === 'HistoryTab') { // Đổi tên Tab
                         iconName = focused ? 'calendar' : 'calendar-outline';
+                    } else if (route.name === 'CustomersTab') {
+                        iconName = focused ? 'people' : 'people-outline';
+                    } else if (route.name === 'CountersTab') {
+                        iconName = focused ? 'storefront' : 'storefront-outline';
                     } else if (route.name === 'ProfileTab') {
                         iconName = focused ? 'person' : 'person-outline';
                     }
@@ -56,6 +65,8 @@ function WorkerTabNavigator() {
             <Tab.Screen name="HomeTab" component={WorkerHomeScreen} options={{ tabBarLabel: 'Trang chủ' }} />
             {/* Sử dụng History thay vì ShiftScreen chung */}
             <Tab.Screen name="HistoryTab" component={WorkerHistoryScreen} options={{ tabBarLabel: 'Lịch sử' }} />
+            <Tab.Screen name="CustomersTab" component={AdminCustomersScreen} options={{ tabBarLabel: 'Khách hàng' }} />
+            <Tab.Screen name="CountersTab" component={AdminCountersScreen} options={{ tabBarLabel: 'Quầy' }} />
             <Tab.Screen name="ProfileTab" component={ProfileScreen} options={{ tabBarLabel: 'Cá nhân' }} />
         </Tab.Navigator>
     );
@@ -81,6 +92,7 @@ export default function WorkerNavigator() {
             />
             {/* Thêm OrderDetail */}
             <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+            <Stack.Screen name="CustomerDetail" component={CustomerDetailScreen} />
         </Stack.Navigator>
     );
 }

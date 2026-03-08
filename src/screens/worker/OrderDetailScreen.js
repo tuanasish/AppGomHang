@@ -118,7 +118,11 @@ const OrderDetailScreen = () => {
                         scale: 2,
                         useCORS: true,
                         backgroundColor: '#ffffff',
-                        logging: false
+                        logging: false,
+                        windowWidth: element.scrollWidth,
+                        windowHeight: element.scrollHeight + 40,
+                        width: element.scrollWidth,
+                        height: element.scrollHeight + 40
                     });
 
                     const uri = canvas.toDataURL('image/jpeg', 0.9);
@@ -495,7 +499,7 @@ const OrderDetailScreen = () => {
                     <ViewShot ref={invoiceRef} options={{ format: 'jpg', quality: 0.9 }}>
                         <View
                             nativeID="order-invoice-capture"
-                            style={{ width: 450, backgroundColor: '#fff', padding: 20 }}
+                            style={{ width: 450, backgroundColor: '#fff', padding: 20, paddingBottom: 48 }}
                             collapsable={false}
                         >
                             <View style={{ alignItems: 'center', marginBottom: 20 }}>

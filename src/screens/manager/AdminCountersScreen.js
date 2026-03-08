@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
     View,
     Text,
@@ -35,17 +36,12 @@ export default function AdminCountersScreen({ navigation }) {
     const [modalVisible, setModalVisible] = useState(false);
     const [editingCounter, setEditingCounter] = useState(null);
     const [formData, setFormData] = useState({ name: '', address: '' });
-
-    useEffect(() => {
-        const unsubscribe = navigation.addListener('focus', () => {
+    useFocusEffect(
+        useCallback(() => {
             loadData();
-        });
-        return unsubscribe;
-    }, [navigation]);
-
-    useEffect(() => {
-        loadData();
-    }, []);
+            // Không return cleanup function nếu không cần thiết
+        }, [])
+    );
 
     const loadData = async () => {
         setLoading(true);
@@ -90,7 +86,7 @@ export default function AdminCountersScreen({ navigation }) {
         try {
             const payload = {
                 name: formData.name.trim(),
-                address: formData.address.trim()
+                address: formData.address ? formData.address.trim() : ''
             };
 
             if (editingCounter) {
@@ -146,16 +142,14 @@ export default function AdminCountersScreen({ navigation }) {
                 {item.address ? <Text style={styles.counterAddress}>{item.address}</Text> : null}
                 <Text style={styles.counterDate}>Ngày tạo: {formatDate(item.createdAt)}</Text>
             </View>
-            {userInfo?.role !== 'worker' && (
-                <View style={styles.cardActions}>
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleOpenModal(item)}>
-                        <Ionicons name="create-outline" size={22} color={theme?.colors?.primary?.default || '#007AFF'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item.id)}>
-                        <Ionicons name="trash-outline" size={22} color="#F44336" />
-                    </TouchableOpacity>
-                </View>
-            )}
+            <View style={styles.cardActions}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => handleOpenModal(item)}>
+                    <Ionicons name="create-outline" size={22} color={theme?.colors?.primary?.default || '#007AFF'} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item.id)}>
+                    <Ionicons name="trash-outline" size={22} color="#F44336" />
+                </TouchableOpacity>
+            </View>
         </View>
     );
 
@@ -163,11 +157,9 @@ export default function AdminCountersScreen({ navigation }) {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Quản lý Quầy</Text>
-                {userInfo?.role !== 'worker' && (
-                    <TouchableOpacity style={styles.addButton} onPress={() => handleOpenModal()}>
-                        <Ionicons name="add" size={24} color="#FFF" />
-                    </TouchableOpacity>
-                )}
+                <TouchableOpacity style={styles.addButton} onPress={() => handleOpenModal()}>
+                    <Ionicons name="add" size={24} color="#FFF" />
+                </TouchableOpacity>
             </View>
 
             {loading ? (

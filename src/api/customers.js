@@ -50,3 +50,31 @@ export const deleteCustomerAPI = async (customerId) => {
 export const searchCustomersAPI = async (query) => {
     return getCustomersListAPI(query, query);
 };
+
+/**
+ * Lưu/cập nhật phí đóng gửi cho khách hàng theo ngày
+ */
+export const saveCustomerDailyFeeAPI = async (customerId, date, phiDongGui, isInvoiced) => {
+    const payload = { customerId, date };
+    if (phiDongGui !== undefined) payload.phiDongGui = phiDongGui;
+    if (isInvoiced !== undefined) payload.isInvoiced = isInvoiced;
+
+    const response = await apiClient.post('/customer-fees', payload);
+    return response.data;
+};
+
+/**
+ * Lấy phí đóng gửi của 1 khách hàng theo ngày
+ */
+export const getCustomerDailyFeeAPI = async (customerId, date) => {
+    const response = await apiClient.get(`/customer-fees/${customerId}`, { params: { date } });
+    return response.data;
+};
+
+/**
+ * Lấy tất cả phí đóng gửi theo ngày (cho Dashboard)
+ */
+export const getAllCustomerDailyFeesAPI = async (date) => {
+    const response = await apiClient.get('/customer-fees', { params: { date } });
+    return response.data;
+};

@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
 import {
     View,
     Text,
@@ -28,8 +30,11 @@ import {
     useDeleteCustomer
 } from '../../hooks/queries/useCustomers';
 import { useOrdersByDate } from '../../hooks/queries/useOrders';
+import { getAllCustomerDailyFeesAPI } from '../../api/customers';
 
 export default function AdminCustomersScreen({ navigation }) {
+    const { userInfo } = useAuth();
+    const isAdmin = userInfo?.role === 'admin' || userInfo?.role === 'manager';
     // Filter states
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -50,6 +55,35 @@ export default function AdminCustomersScreen({ navigation }) {
         isRefetching: isOrdersRefetching,
         refetch: refetchOrders
     } = useOrdersByDate(dateStr);
+
+    // Invoice status tracking
+    const [invoicedCustomerIds, setInvoicedCustomerIds] = useState({});
+
+    const fetchInvoiceStatus = useCallback(async () => {
+        try {
+            const feesRes = await getAllCustomerDailyFeesAPI(dateStr);
+            if (feesRes?.success && feesRes.data) {
+                const map = {};
+                feesRes.data.forEach(fee => {
+                    if (fee.isInvoiced && fee.customerId) {
+                        map[fee.customerId] = true;
+                    }
+                });
+                setInvoicedCustomerIds(map);
+            } else {
+                setInvoicedCustomerIds({});
+            }
+        } catch (e) {
+            setInvoicedCustomerIds({});
+        }
+    }, [dateStr]);
+
+    // Fetch invoice statuses when screen gains focus or date changes
+    useFocusEffect(
+        useCallback(() => {
+            fetchInvoiceStatus();
+        }, [fetchInvoiceStatus])
+    );
 
     // Use derived state
     const customers = useMemo(() => {
@@ -76,14 +110,15 @@ export default function AdminCustomersScreen({ navigation }) {
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
-        address: '',
+        defaultTax: '',
         defaultTienCongGom: ''
     });
 
     const handleRefresh = useCallback(() => {
         refetchCustomers();
         refetchOrders();
-    }, [refetchCustomers, refetchOrders]);
+        fetchInvoiceStatus();
+    }, [refetchCustomers, refetchOrders, fetchInvoiceStatus]);
 
     const handleDateChange = (event, selected) => {
         setShowDatePicker(Platform.OS === 'ios');
@@ -110,8 +145,8 @@ export default function AdminCustomersScreen({ navigation }) {
 
         const payload = {
             name: formData.name.trim(),
-            phone: formData.phone.trim(),
-            address: formData.address.trim(),
+            phone: formData.phone ? formData.phone.trim() : '',
+            address: formData.defaultTax ? formData.defaultTax.trim() : '',
             defaultTienCongGom: formData.defaultTienCongGom ? parseInt(formData.defaultTienCongGom) : null,
         };
 
@@ -166,7 +201,7 @@ export default function AdminCustomersScreen({ navigation }) {
             setFormData({
                 name: customer.name,
                 phone: customer.phone || '',
-                address: customer.address || '',
+                defaultTax: customer.address || '',
                 defaultTienCongGom: customer.defaultTienCongGom ? customer.defaultTienCongGom.toString() : ''
             });
         } else {
@@ -174,7 +209,7 @@ export default function AdminCustomersScreen({ navigation }) {
             setFormData({
                 name: '',
                 phone: '',
-                address: '',
+                defaultTax: '',
                 defaultTienCongGom: ''
             });
         }
@@ -221,23 +256,32 @@ export default function AdminCustomersScreen({ navigation }) {
             >
                 <View style={styles.cardHeader}>
                     <View style={styles.customerInfo}>
-                        <Text style={styles.customerName}>{item.name}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={styles.customerName}>{item.name}</Text>
+                            {invoicedCustomerIds[item.id] && (
+                                <View style={{ backgroundColor: '#10B981', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
+                                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>✓ Đã xuất bill</Text>
+                                </View>
+                            )}
+                        </View>
                         {(item.phone || item.address) && (
                             <Text style={styles.customerContact}>
                                 {item.phone ? `${item.phone} ` : ''}
                                 {item.phone && item.address ? '| ' : ''}
-                                {item.address || ''}
+                                {item.address ? `Thuế mặc định: ${item.address}%` : ''}
                             </Text>
                         )}
                     </View>
-                    <View style={styles.actionRowContainer}>
-                        <TouchableOpacity style={styles.actionBtn} onPress={() => openModal(item)}>
-                            <Ionicons name="pencil" size={20} color={theme?.colors?.primary?.default || '#007AFF'} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item.id)}>
-                            <Ionicons name="trash" size={20} color="#FF3B30" />
-                        </TouchableOpacity>
-                    </View>
+                    {isAdmin && (
+                        <View style={styles.actionRowContainer}>
+                            <TouchableOpacity style={styles.actionBtn} onPress={() => openModal(item)}>
+                                <Ionicons name="create-outline" size={22} color={theme?.colors?.primary?.default || '#007AFF'} />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item.id)}>
+                                <Ionicons name="trash-outline" size={22} color="#FF3B30" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
 
                 <View style={styles.statsContainer}>
@@ -264,12 +308,14 @@ export default function AdminCustomersScreen({ navigation }) {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Quản lý Khách hàng</Text>
-                <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => openModal()}
-                >
-                    <Ionicons name="add" size={24} color="#FFF" />
-                </TouchableOpacity>
+                {isAdmin && (
+                    <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() => openModal()}
+                    >
+                        <Ionicons name="add" size={24} color="#FFF" />
+                    </TouchableOpacity>
+                )}
             </View>
 
             {renderDateSelector()}
@@ -345,18 +391,20 @@ export default function AdminCustomersScreen({ navigation }) {
                                     </View>
 
                                     <View style={styles.formGroup}>
-                                        <Text style={styles.label}>Địa chỉ</Text>
+                                        <Text style={styles.label}>Thuế mặc định (%)</Text>
                                         <TextInput
                                             style={styles.input}
-                                            value={formData.address}
-                                            onChangeText={(text) => setFormData({ ...formData, address: text })}
-                                            placeholder="Nhập địa chỉ"
+                                            value={formData.defaultTax}
+                                            onChangeText={(text) => setFormData({ ...formData, defaultTax: text })}
+                                            placeholder="VD: 1.5"
                                             placeholderTextColor={theme.colors.text.hint}
+                                            keyboardType="decimal-pad"
                                         />
+                                        <Text style={styles.helpText}>Tự động điền khi tạo đơn cho khách này</Text>
                                     </View>
 
                                     <View style={styles.formGroup}>
-                                        <Text style={styles.label}>Công gom mặc định (VNĐ)</Text>
+                                        <Text style={styles.label}>Phí gom mặc định (VNĐ)</Text>
                                         <TextInput
                                             style={styles.input}
                                             value={formData.defaultTienCongGom}

@@ -129,7 +129,7 @@ const StartShiftScreen = () => {
                     <Text style={styles.title}>Ca làm việc mới</Text>
                     <Text style={styles.noShiftSubtext}>Bạn chưa có ca làm việc nào trong ngày hôm nay. Nhấn "Bắt đầu làm việc" để hệ thống tự động tạo ca với số dư 0đ.</Text>
                     <Button
-                        title="Bắt đầu làm việc (Tự tạo ca)"
+                        title="Bắt đầu làm việc"
                         onPress={handleAutoStartShift}
                         loading={isStarting}
                         disabled={isStarting}

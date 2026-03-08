@@ -50,8 +50,11 @@ export default function AdminStaffScreen() {
                 name: formData.name,
                 email: formData.email,
                 phone: formData.phone,
-                role: 'worker' // Hoặc có thể thêm logic chọn role
             };
+            // Only set role when creating new staff; when editing, preserve existing role
+            if (!editingStaff) {
+                staffPayload.role = 'worker';
+            }
             if (formData.password) {
                 staffPayload.password = formData.password;
             }

@@ -55,50 +55,58 @@ const LoginScreen = () => {
         }
     };
 
+    const FormContent = (
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1, justifyContent: 'center' }}
+        >
+            <View style={styles.formContainer}>
+                <Text style={styles.title}>Gom Hàng Ninh Hiệp</Text>
+                <Text style={styles.subtitle}>Ứng dụng nội bộ</Text>
+
+                <TextInput
+                    style={styles.input}
+                    placeholder="Email nội bộ"
+                    placeholderTextColor={theme.colors.text.hint}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={email}
+                    onChangeText={setEmail}
+                />
+
+                <TextInput
+                    style={styles.input}
+                    placeholder="Mật khẩu"
+                    placeholderTextColor={theme.colors.text.hint}
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                />
+
+                <TouchableOpacity
+                    style={styles.button}
+                    onPress={handleLogin}
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={styles.buttonText}>Đăng nhập</Text>
+                    )}
+                </TouchableOpacity>
+            </View>
+        </KeyboardAvoidingView>
+    );
+
     return (
         <SafeAreaView style={styles.container}>
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={{ flex: 1, justifyContent: 'center' }}
-                >
-                    <View style={styles.formContainer}>
-                        <Text style={styles.title}>Gom Hàng Ninh Hiệp</Text>
-                        <Text style={styles.subtitle}>Ứng dụng nội bộ</Text>
-
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Email nội bộ"
-                            placeholderTextColor={theme.colors.text.hint}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            value={email}
-                            onChangeText={setEmail}
-                        />
-
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Mật khẩu"
-                            placeholderTextColor={theme.colors.text.hint}
-                            secureTextEntry
-                            value={password}
-                            onChangeText={setPassword}
-                        />
-
-                        <TouchableOpacity
-                            style={styles.button}
-                            onPress={handleLogin}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.buttonText}>Đăng nhập</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                </KeyboardAvoidingView>
-            </TouchableWithoutFeedback>
+            {Platform.OS === 'web' ? (
+                FormContent
+            ) : (
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    {FormContent}
+                </TouchableWithoutFeedback>
+            )}
         </SafeAreaView>
     );
 };
